@@ -1,0 +1,22 @@
+{
+  "name": "dc4d-endorsement",
+  "version": "0.0.1",
+  "description": "Explanation of DC4D endorsement vote with limited ranked choice",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kcivey/dc4d-endorsement.git"
+  },
+  "author": "Keith C. Ivey <keith@iveys.org>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kcivey/dc4d-endorsement/issues"
+  },
+  "homepage": "https://github.com/kcivey/dc4d-endorsement#readme",
+  "devDependencies": {
+    "eslint": "^6.6.0"
+  }
+}
