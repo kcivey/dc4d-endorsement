@@ -14,7 +14,7 @@
         Z: 'Zhang',
         N: 'No endorsement',
     };
-    const colors = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#f781bf', '#a65628'];
+    const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
     const candidateColor = {};
     const candidateIndex = {};
     const candidateCount = {};
@@ -23,7 +23,7 @@
         candidateIndex[c] = i;
         candidateCount[c] = 0;
     });
-    candidateColor['N'] = '#555555';
+    candidateColor['N'] = '#888888';
     const squareSide = 16;
 
     const svg = makeSvgNode(
@@ -36,8 +36,8 @@
         makeSvgNode(
             'text',
             {
-                x: 90,
-                y: 100 + candidateIndex[candidate] * 2 * squareSide + 0.7 * squareSide,
+                x: 110,
+                y: 120 + candidateIndex[candidate] * 2 * squareSide + 0.8 * squareSide,
                 class: 'name',
             },
             svg,
@@ -50,9 +50,9 @@
             return;
         }
         const candidate = votes[0];
-        const x = 100 + candidateCount[candidate] * 1.1 * squareSide;
+        const x = 120 + candidateCount[candidate] * 1.1 * squareSide;
         candidateCount[candidate]++;
-        const y = 100 + candidateIndex[candidate] * 2 * squareSide;
+        const y = 120 + candidateIndex[candidate] * 2 * squareSide;
         voteBoxes.push(makeVoteBox(votes, x, y));
     });
     // move(voteBoxes[0], [500, 300])
@@ -61,9 +61,8 @@
         let style = '';
         Object.keys(candidateColor).forEach(c => style += `.${c} { fill: ${candidateColor[c]} }\n`);
         style += `.letter { font-size: ${0.4 * squareSide}px; fill: black; }\n` +
-            `.name { font-size: ${0.6 * squareSide}px; fill: black; text-anchor: end }\n` +
-            'rect,polygon { opacity: 0.6 }\n' +
-            `.border { stroke-width: ${squareSide / 25}px; stroke: #888888; fill: transparent; }\n`;
+            `.name { font-size: ${0.8 * squareSide}px; fill: black; text-anchor: end }\n` +
+            `.border { stroke-width: ${squareSide / 25}px; stroke: #bbbbbb; fill: transparent; }\n`;
         makeSvgNode('style', {}, svg, style);
     }
 
