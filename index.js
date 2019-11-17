@@ -134,12 +134,12 @@
 
         moveTo(to) {
             const from = [this.pos[0], this.pos[1]];
-            const steps = 60;
             const time = 500;
+            const steps = Math.round(time / 40);
             const that = this;
             return new Promise(function (resolve) {
                 for (let i = 0; i < steps; i++) {
-                    const frac = (i + 1) / steps;
+                    const frac = easing((i + 1) / steps);
                     const x = from[0] + frac * (to[0] - from[0]);
                     const y = from[1] + frac * (to[1] - from[1]);
                     setTimeout(
@@ -154,6 +154,10 @@
                     );
                 }
             });
+
+            function easing(t) {
+                return 1 - Math.pow(1 - t, 3);
+            }
         }
 
     }
