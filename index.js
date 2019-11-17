@@ -161,7 +161,7 @@
         makeSvgNode(
             'text',
             {
-                x: 110,
+                x: 100,
                 y: candidateY(candidate) + 0.8 * squareSide,
                 class: 'name',
             },
@@ -169,6 +169,7 @@
             candidates[candidate]
         );
     });
+    writeCounts();
     voteList.forEach(function (votes) {
         if (votes[0] === 'A' || votes[0] === 'S') {
             return;
@@ -205,6 +206,8 @@
         });
         const tasks = boxGroups.map(function (boxGroup) {
             return function () {
+                candidateCount[bottomCandidate] -= boxGroup.length;
+                writeCounts();
                 const promises = boxGroup.map(function (box) {
                     let toCandidate = box.useNextChoice() || 'N';
                     if (!voteBoxes[toCandidate]) {
@@ -212,11 +215,10 @@
                     }
                     voteBoxes[toCandidate].push(box);
                     const pos = [candidateX(toCandidate), candidateY(toCandidate)];
-                    candidateCount[bottomCandidate]--;
                     candidateCount[toCandidate]++;
                     return box.moveTo(pos);
                 });
-                return Promise.all(promises);
+                return Promise.all(promises).then(writeCounts);
             };
         });
         return tasks.reduce(
@@ -231,8 +233,27 @@
             });
     }
 
+    function writeCounts() {
+        const countNodes = document.getElementsByClassName('count');
+        while (countNodes.length) {
+            countNodes[0].parentNode.removeChild(countNodes[0]);
+        }
+        Object.keys(candidates).forEach(function (candidate) {
+            makeSvgNode(
+                'text',
+                {
+                    x: 125,
+                    y: candidateY(candidate) + 0.8 * squareSide,
+                    class: 'count',
+                },
+                svg,
+                candidateCount[candidate].toString()
+            );
+        });
+    }
+
     function candidateX(candidate) {
-        return 120 + candidateCount[candidate] * 1.1 * squareSide;
+        return 140 + candidateCount[candidate] * 1.1 * squareSide;
     }
 
     function candidateY(candidate) {
@@ -244,6 +265,7 @@
         Object.keys(candidateColor).forEach(c => style += `.${c} { fill: ${candidateColor[c]} }\n`);
         style += `.letter { font-size: ${0.4 * squareSide}px; fill: black; }\n` +
             `.name { font-size: ${0.8 * squareSide}px; fill: black; text-anchor: end }\n` +
+            `.count { font-size: ${0.8 * squareSide}px; fill: blue; text-anchor: end }\n` +
             `.border { stroke-width: ${squareSide / 25}px; stroke: #bbbbbb; fill: transparent; }\n`;
         makeSvgNode('style', {}, svg, style);
     }
