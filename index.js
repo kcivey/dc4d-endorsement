@@ -47,17 +47,20 @@
             );
             if (votes.length === 2) {
                 makeSvgNode(
-                    'polygon',
+                    'rect',
                     {
-                        points: `0,0 ${boxWidth},0 0,${boxHeight}`,
+                        width: boxWidth,
+                        height: 0.5 * boxHeight,
                         class: votes[0],
                     },
                     g
                 );
                 makeSvgNode(
-                    'polygon',
+                    'rect',
                     {
-                        points: `${boxWidth},0 ${boxWidth},${boxHeight} 0,${boxHeight}`,
+                        width: boxWidth,
+                        height: 0.5 * boxHeight,
+                        y: 0.5 * boxHeight,
                         class: votes[1],
                     },
                     g
@@ -65,8 +68,8 @@
                 makeSvgNode(
                     'text',
                     {
-                        x: 0.25 * boxWidth,
-                        y: 0.45 * boxHeight,
+                        x: 0.5 * boxWidth,
+                        y: 0.4 * boxHeight,
                         class: 'letter',
                     },
                     g,
@@ -75,8 +78,8 @@
                 makeSvgNode(
                     'text',
                     {
-                        x: 0.75 * boxWidth,
-                        y: 0.85 * boxHeight,
+                        x: 0.5 * boxWidth,
+                        y: 0.9 * boxHeight,
                         class: 'letter',
                     },
                     g,
