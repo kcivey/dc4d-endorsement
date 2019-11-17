@@ -8,6 +8,17 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.8.1/css/all.min.css" integrity="sha256-7rF6RaSKyh16288E3hVdzQtHyzatA2MQRGu0cf6pqqM=" crossorigin="anonymous">
   <link rel="stylesheet" href="/index.css">
   <style type="text/css">
+    #top-text {
+      max-width: 40rem;
+      font-size: 20px;
+      height: 15rem;
+    }
+    button:last-of-type {
+      margin-right: 1rem;
+    }
+    .byline {
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -18,17 +29,17 @@
       <div class="byline">
         Keith C. Ivey
       </div>
-      <div id="intro">
-        <p>
-        </p>
-      </div>
-      <div>
-        <button id="play-button" class="btn btn-lg btn-primary">
-          <i class="fas fa-play" title="Play"></i>
-        </button>
-        <button id="forward-button" class="btn btn-lg btn-primary">
-          <i class="fas fa-forward" title="Forward"></i>
-        </button>
+      <div id="top-text" class="clearfix">
+        <div class="float-left">
+          <button id="play-button" class="btn btn-lg btn-primary">
+            <i class="fas fa-play" title="Do one step"></i>
+          </button>
+          <button id="forward-button" class="btn btn-lg btn-primary">
+            <i class="fas fa-forward" title="Do all steps"></i>
+          </button>
+        </div>
+        <p id="explanation1"></p>
+        <p id="explanation2"></p>
       </div>
       <div id="figure-container"></div>
     </div>

@@ -3,6 +3,7 @@
         'G G G G GZ GZ GK GH G GZ G GK PG ZG ZG ZG KG KG KG GP G GK GP GF GK F F F F F F F F FZ ZF PF PF Z ZP ' +
         'ZH PZ HZ HZ Z P HP N N S S A')
         .split(' ')
+        .filter(t => t !== 'A' && t !== 'S')
         .sort((a, b) => (a.length - b.length) || (a > b ? 1 : a < b ? -1 : 0))
         .map(v => v.split(''));
     const ballotCount = voteList.length;
@@ -174,19 +175,23 @@
             candidates[candidate]
         );
     });
-    writeCounts();
     voteList.forEach(function (votes) {
-        if (votes[0] === 'A' || votes[0] === 'S') {
-            return;
-        }
         const candidate = votes[0];
         const x = candidateX(candidate);
         const y = candidateY(candidate);
         candidateCount[candidate]++;
         voteBoxes[candidate].push(new VoteBox(votes, [x, y]));
     });
-    document.getElementById('play-button').addEventListener('click', () => doRounds(false));
-    document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
+    writeCounts();
+    const result = writeExplanation();
+    if (result === true) {
+        document.getElementById('play-button').addEventListener('click', () => doRounds(false));
+        document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
+    }
+    else {
+        document.getElementById('play-button').disabled = true;
+        document.getElementById('forward-button').disabled = true;
+    }
 
     function doRounds(keepGoing) {
         document.getElementById('play-button').disabled = true;
@@ -194,12 +199,12 @@
         const sortedCandidates = Object.keys(voteBoxes)
             .filter(c => c !== 'N')
             .sort((a, b) => candidateCount[a] - candidateCount[b]);
-        const topCandidate = sortedCandidates[sortedCandidates.length - 1];
-        const winner = candidateCount[topCandidate] >= endorsementThreshold ? topCandidate : null;
-        if (winner || sortedCandidates.length < 2) {
-            return Promise.resolve(winner);
-        }
-        const bottomCandidate = sortedCandidates[0];
+        const bottomCandidate = sortedCandidates.shift();
+        document.getElementById('explanation1').innerHTML =
+            `${candidates[bottomCandidate]} is eliminated, and each of those ${candidateCount[bottomCandidate]}
+            votes is transferred to the second-choice candidate for that ballot. If there is no second choice, or
+            if the second choice has already been eliminated, the vote is transferred to "No endorsement".`;
+        document.getElementById('explanation2').innerHTML = '';
         const boxesToMove = voteBoxes[bottomCandidate].reverse();
         const boxGroups = [];
         let prev = '';
@@ -233,6 +238,10 @@
         )
             .then(function () {
                 delete voteBoxes[bottomCandidate];
+                const result = writeExplanation();
+                if (result !== true) {
+                    return result;
+                }
                 if (keepGoing) {
                     return new Promise(function (resolve) {
                         setTimeout(() => resolve(doRounds(true)), 500);
@@ -240,8 +249,33 @@
                 }
                 document.getElementById('play-button').disabled = false;
                 document.getElementById('forward-button').disabled = false;
-                return false;
+                return true;
             });
+    }
+
+    function writeExplanation() {
+        const sortedCandidates = Object.keys(voteBoxes)
+            .filter(c => c !== 'N')
+            .sort((a, b) => candidateCount[b] - candidateCount[a]);
+        const topCandidate = sortedCandidates[0];
+        const winner = candidateCount[topCandidate] >= endorsementThreshold ? topCandidate : null;
+        const explanation2 = document.getElementById('explanation2');
+        const percent = (100 * candidateCount[topCandidate] / ballotCount).toFixed(2);
+        explanation2.innerHTML =
+            `${candidates[topCandidate]} has ${candidateCount[topCandidate]} votes, or ${percent}%, ` +
+            (winner ? 'and has reached' : 'short of') +
+            ` the two thirds (${Math.ceil(endorsementThreshold)} votes) needed for endorsement. `;
+        if (winner || sortedCandidates.length < 2) {
+            explanation2.innerHTML += winner
+                ? `<strong>${candidates[topCandidate]} is endorsed.</strong>`
+                : 'No candidates are left to be eliminated. <strong>There is no endorsement.</strong>';
+            return winner;
+        }
+        const candidatesEliminated = Object.keys(candidates) - 1 - sortedCandidates.length;
+        explanation2.innerHTML += candidatesEliminated
+            ? 'The process continues.'
+            : 'Second votes must be examined. Click a button to do one step or the entire process.';
+        return true;
     }
 
     function writeCounts() {
