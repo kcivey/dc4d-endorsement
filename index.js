@@ -118,13 +118,17 @@
             this.voteIndex = 0;
         }
 
-        currentVote() {
+        currentChoice() {
             return this.votes[this.voteIndex];
         }
 
-        useNextVote() {
+        useNextChoice() {
             this.voteIndex++;
-            return this.currentVote();
+            return this.currentChoice();
+        }
+
+        secondChoice() {
+            return this.votes[1];
         }
 
         moveTo(to) {
@@ -190,18 +194,29 @@
         }
         const bottomCandidate = sortedCandidates[0];
         const boxesToMove = voteBoxes[bottomCandidate].reverse();
-        const tasks = boxesToMove.map(function (box) {
+        const boxGroups = [];
+        let prev = '';
+        boxesToMove.forEach(function (box) {
+            if (prev !== box.secondChoice()) {
+                boxGroups.push([]);
+            }
+            boxGroups[boxGroups.length - 1].unshift(box);
+            prev = box.secondChoice();
+        });
+        const tasks = boxGroups.map(function (boxGroup) {
             return function () {
-                let toCandidate = box.useNextVote() || 'N';
-                if (!voteBoxes[toCandidate]) {
-                    toCandidate = 'N';
-                }
-                voteBoxes[toCandidate].push(box);
-                return box.moveTo([candidateX(toCandidate), candidateY(toCandidate)])
-                    .then(function () {
-                        candidateCount[bottomCandidate]--;
-                        candidateCount[toCandidate]++;
-                    });
+                const promises = boxGroup.map(function (box) {
+                    let toCandidate = box.useNextChoice() || 'N';
+                    if (!voteBoxes[toCandidate]) {
+                        toCandidate = 'N';
+                    }
+                    voteBoxes[toCandidate].push(box);
+                    const pos = [candidateX(toCandidate), candidateY(toCandidate)];
+                    candidateCount[bottomCandidate]--;
+                    candidateCount[toCandidate]++;
+                    return box.moveTo(pos);
+                });
+                return Promise.all(promises);
             };
         });
         return tasks.reduce(
