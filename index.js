@@ -193,8 +193,6 @@
         const topCandidate = sortedCandidates[sortedCandidates.length - 1];
         const winner = candidateCount[topCandidate] >= endorsementThreshold ? topCandidate : null;
         if (winner || sortedCandidates.length < 2) {
-            document.getElementById('play-button').disabled = false;
-            document.getElementById('forward-button').disabled = false;
             return Promise.resolve(winner);
         }
         const bottomCandidate = sortedCandidates[0];
