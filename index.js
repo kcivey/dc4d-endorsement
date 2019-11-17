@@ -28,7 +28,8 @@
         voteBoxes[c] = [];
     });
     candidateColor['N'] = '#888888';
-    const squareSide = 16;
+    const boxHeight = 16;
+    const boxWidth = boxHeight;
     const svg = makeSvgNode(
         'svg',
         {viewBox: '0,0 1000,1000', width: '100%'},
@@ -48,7 +49,7 @@
                 makeSvgNode(
                     'polygon',
                     {
-                        points: `0,0 ${squareSide},0 0,${squareSide}`,
+                        points: `0,0 ${boxWidth},0 0,${boxHeight}`,
                         class: votes[0],
                     },
                     g
@@ -56,7 +57,7 @@
                 makeSvgNode(
                     'polygon',
                     {
-                        points: `${squareSide},0 ${squareSide},${squareSide} 0,${squareSide}`,
+                        points: `${boxWidth},0 ${boxWidth},${boxHeight} 0,${boxHeight}`,
                         class: votes[1],
                     },
                     g
@@ -64,8 +65,8 @@
                 makeSvgNode(
                     'text',
                     {
-                        x: 0.1 * squareSide,
-                        y: 0.45 * squareSide,
+                        x: 0.25 * boxWidth,
+                        y: 0.45 * boxHeight,
                         class: 'letter',
                     },
                     g,
@@ -74,8 +75,8 @@
                 makeSvgNode(
                     'text',
                     {
-                        x: 0.6 * squareSide,
-                        y: 0.85 * squareSide,
+                        x: 0.75 * boxWidth,
+                        y: 0.85 * boxHeight,
                         class: 'letter',
                     },
                     g,
@@ -86,8 +87,8 @@
                 makeSvgNode(
                     'rect',
                     {
-                        width: squareSide,
-                        height: squareSide,
+                        width: boxWidth,
+                        height: boxHeight,
                         class: votes[0],
                     },
                     g
@@ -95,8 +96,8 @@
                 makeSvgNode(
                     'text',
                     {
-                        x: 0.35 * squareSide,
-                        y: 0.65 * squareSide,
+                        x: 0.5 * boxWidth,
+                        y: 0.65 * boxHeight,
                         class: 'letter',
                     },
                     g,
@@ -106,8 +107,8 @@
             makeSvgNode(
                 'rect',
                 {
-                    width: squareSide,
-                    height: squareSide,
+                    width: boxWidth,
+                    height: boxHeight,
                     class: 'border',
                 },
                 g
@@ -162,7 +163,7 @@
             'text',
             {
                 x: 100,
-                y: candidateY(candidate) + 0.8 * squareSide,
+                y: candidateY(candidate) + 0.8 * boxHeight,
                 class: 'name',
             },
             svg,
@@ -243,7 +244,7 @@
                 'text',
                 {
                     x: 125,
-                    y: candidateY(candidate) + 0.8 * squareSide,
+                    y: candidateY(candidate) + 0.8 * boxHeight,
                     class: 'count',
                 },
                 svg,
@@ -253,20 +254,20 @@
     }
 
     function candidateX(candidate) {
-        return 140 + candidateCount[candidate] * 1.1 * squareSide;
+        return 140 + candidateCount[candidate] * 1.1 * boxWidth;
     }
 
     function candidateY(candidate) {
-        return 120 + candidateIndex[candidate] * 2 * squareSide;
+        return 120 + candidateIndex[candidate] * 2 * boxHeight;
     }
 
     function makeStyle() {
         let style = '';
         Object.keys(candidateColor).forEach(c => style += `.${c} { fill: ${candidateColor[c]} }\n`);
-        style += `.letter { font-size: ${0.4 * squareSide}px; fill: black; }\n` +
-            `.name { font-size: ${0.8 * squareSide}px; fill: black; text-anchor: end }\n` +
-            `.count { font-size: ${0.8 * squareSide}px; fill: blue; text-anchor: end }\n` +
-            `.border { stroke-width: ${squareSide / 25}px; stroke: #bbbbbb; fill: transparent; }\n`;
+        style += `.letter { font-size: ${0.45 * boxHeight}px; fill: black; text-anchor: middle }\n` +
+            `.name { font-size: ${0.75 * boxHeight}px; fill: black; text-anchor: end }\n` +
+            `.count { font-size: ${0.75 * boxHeight}px; fill: blue; text-anchor: end }\n` +
+            `.border { stroke-width: ${boxHeight / 25}px; stroke: #bbbbbb; fill: transparent; }\n`;
         makeSvgNode('style', {}, svg, style);
     }
 
