@@ -32,7 +32,7 @@
     const boxWidth = boxHeight;
     const svg = makeSvgNode(
         'svg',
-        {viewBox: '0,0 1000,1000', width: '100%'},
+        {viewBox: '0,0 1000,300', width: '100%'},
         document.getElementById('figure-container')
     );
     makeStyle();
@@ -181,18 +181,21 @@
         candidateCount[candidate]++;
         voteBoxes[candidate].push(new VoteBox(votes, [x, y]));
     });
-    doRounds().then(console.log)
+    document.getElementById('play-button').addEventListener('click', () => doRounds(false));
+    document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
 
-    function doRounds() {
+    function doRounds(keepGoing) {
+        document.getElementById('play-button').disabled = true;
+        document.getElementById('forward-button').disabled = true;
         const sortedCandidates = Object.keys(voteBoxes)
             .filter(c => c !== 'N')
             .sort((a, b) => candidateCount[a] - candidateCount[b]);
         const topCandidate = sortedCandidates[sortedCandidates.length - 1];
-        if (candidateCount[topCandidate] >= endorsementThreshold) {
-            return Promise.resolve(topCandidate);
-        }
-        if (sortedCandidates.length < 2) {
-            return Promise.resolve();
+        const winner = candidateCount[topCandidate] >= endorsementThreshold ? topCandidate : null;
+        if (winner || sortedCandidates.length < 2) {
+            document.getElementById('play-button').disabled = false;
+            document.getElementById('forward-button').disabled = false;
+            return Promise.resolve(winner);
         }
         const bottomCandidate = sortedCandidates[0];
         const boxesToMove = voteBoxes[bottomCandidate].reverse();
@@ -228,9 +231,14 @@
         )
             .then(function () {
                 delete voteBoxes[bottomCandidate];
-                return new Promise(function (resolve) {
-                    setTimeout(() => resolve(doRounds()), 500);
-                });
+                if (keepGoing) {
+                    return new Promise(function (resolve) {
+                        setTimeout(() => resolve(doRounds(true)), 500);
+                    });
+                }
+                document.getElementById('play-button').disabled = false;
+                document.getElementById('forward-button').disabled = false;
+                return false;
             });
     }
 
@@ -258,7 +266,7 @@
     }
 
     function candidateY(candidate) {
-        return 120 + candidateIndex[candidate] * 2 * boxHeight;
+        return 5 + candidateIndex[candidate] * 2 * boxHeight;
     }
 
     function makeStyle() {
