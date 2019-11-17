@@ -5,6 +5,8 @@
         .split(' ')
         .sort((a, b) => (a.length - b.length) || (a > b ? 1 : a < b ? -1 : 0))
         .map(v => v.split(''));
+    const ballotCount = voteList.length;
+    const endorsementThreshold = ballotCount * 2 / 3;
     const candidates = {
         F: 'Fanning',
         G: 'Grossman',
@@ -18,44 +20,209 @@
     const candidateColor = {};
     const candidateIndex = {};
     const candidateCount = {};
+    const voteBoxes = {};
     Object.keys(candidates).forEach(function (c, i) {
         candidateColor[c] = colors[i];
         candidateIndex[c] = i;
         candidateCount[c] = 0;
+        voteBoxes[c] = [];
     });
     candidateColor['N'] = '#888888';
     const squareSide = 16;
-
     const svg = makeSvgNode(
         'svg',
         {viewBox: '0,0 1000,1000', width: '100%'},
         document.getElementById('figure-container')
     );
     makeStyle();
+
+    class VoteBox {
+
+        constructor(votes, pos) {
+            const g = makeSvgNode(
+                'g',
+                {transform: `translate(${pos[0]},${pos[1]})`},
+                svg
+            );
+            if (votes.length === 2) {
+                makeSvgNode(
+                    'polygon',
+                    {
+                        points: `0,0 ${squareSide},0 0,${squareSide}`,
+                        class: votes[0],
+                    },
+                    g
+                );
+                makeSvgNode(
+                    'polygon',
+                    {
+                        points: `${squareSide},0 ${squareSide},${squareSide} 0,${squareSide}`,
+                        class: votes[1],
+                    },
+                    g
+                );
+                makeSvgNode(
+                    'text',
+                    {
+                        x: 0.1 * squareSide,
+                        y: 0.45 * squareSide,
+                        class: 'letter',
+                    },
+                    g,
+                    votes[0]
+                );
+                makeSvgNode(
+                    'text',
+                    {
+                        x: 0.6 * squareSide,
+                        y: 0.85 * squareSide,
+                        class: 'letter',
+                    },
+                    g,
+                    votes[1]
+                );
+            }
+            else {
+                makeSvgNode(
+                    'rect',
+                    {
+                        width: squareSide,
+                        height: squareSide,
+                        class: votes[0],
+                    },
+                    g
+                );
+                makeSvgNode(
+                    'text',
+                    {
+                        x: 0.35 * squareSide,
+                        y: 0.65 * squareSide,
+                        class: 'letter',
+                    },
+                    g,
+                    votes[0]
+                );
+            }
+            makeSvgNode(
+                'rect',
+                {
+                    width: squareSide,
+                    height: squareSide,
+                    class: 'border',
+                },
+                g
+            );
+            this.votes = votes;
+            this.node = g;
+            this.pos = pos;
+            this.voteIndex = 0;
+        }
+
+        currentVote() {
+            return this.votes[this.voteIndex];
+        }
+
+        useNextVote() {
+            this.voteIndex++;
+            return this.currentVote();
+        }
+
+        moveTo(to) {
+            const from = [this.pos[0], this.pos[1]];
+            const steps = 60;
+            const time = 500;
+            const that = this;
+            return new Promise(function (resolve) {
+                for (let i = 0; i < steps; i++) {
+                    const frac = (i + 1) / steps;
+                    const x = from[0] + frac * (to[0] - from[0]);
+                    const y = from[1] + frac * (to[1] - from[1]);
+                    setTimeout(
+                        function () {
+                            that.pos = [x, y];
+                            that.node.setAttribute('transform', `translate(${x},${y})`);
+                            if (frac >= 1) {
+                                resolve();
+                            }
+                        },
+                        frac * time
+                    );
+                }
+            });
+        }
+
+    }
+
     Object.keys(candidates).forEach(function (candidate) {
         makeSvgNode(
             'text',
             {
                 x: 110,
-                y: 120 + candidateIndex[candidate] * 2 * squareSide + 0.8 * squareSide,
+                y: candidateY(candidate) + 0.8 * squareSide,
                 class: 'name',
             },
             svg,
             candidates[candidate]
         );
     });
-    const voteBoxes = [];
     voteList.forEach(function (votes) {
         if (votes[0] === 'A' || votes[0] === 'S') {
             return;
         }
         const candidate = votes[0];
-        const x = 120 + candidateCount[candidate] * 1.1 * squareSide;
+        const x = candidateX(candidate);
+        const y = candidateY(candidate);
         candidateCount[candidate]++;
-        const y = 120 + candidateIndex[candidate] * 2 * squareSide;
-        voteBoxes.push(makeVoteBox(votes, x, y));
+        voteBoxes[candidate].push(new VoteBox(votes, [x, y]));
     });
-    // move(voteBoxes[0], [500, 300])
+    doRounds().then(console.log)
+
+    function doRounds() {
+        const sortedCandidates = Object.keys(voteBoxes)
+            .filter(c => c !== 'N')
+            .sort((a, b) => candidateCount[a] - candidateCount[b]);
+        const topCandidate = sortedCandidates[sortedCandidates.length - 1];
+        if (candidateCount[topCandidate] >= endorsementThreshold) {
+            return Promise.resolve(topCandidate);
+        }
+        if (sortedCandidates.length < 2) {
+            return Promise.resolve();
+        }
+        const bottomCandidate = sortedCandidates[0];
+        const boxesToMove = voteBoxes[bottomCandidate].reverse();
+        const tasks = boxesToMove.map(function (box) {
+            return function () {
+                let toCandidate = box.useNextVote() || 'N';
+                if (!voteBoxes[toCandidate]) {
+                    toCandidate = 'N';
+                }
+                voteBoxes[toCandidate].push(box);
+                return box.moveTo([candidateX(toCandidate), candidateY(toCandidate)])
+                    .then(function () {
+                        candidateCount[bottomCandidate]--;
+                        candidateCount[toCandidate]++;
+                    });
+            };
+        });
+        return tasks.reduce(
+            (promiseChain, currentTask) => promiseChain = promiseChain.then(currentTask),
+            Promise.resolve()
+        )
+            .then(function () {
+                delete voteBoxes[bottomCandidate];
+                return new Promise(function (resolve) {
+                    setTimeout(() => resolve(doRounds()), 500);
+                });
+            });
+    }
+
+    function candidateX(candidate) {
+        return 120 + candidateCount[candidate] * 1.1 * squareSide;
+    }
+
+    function candidateY(candidate) {
+        return 120 + candidateIndex[candidate] * 2 * squareSide;
+    }
 
     function makeStyle() {
         let style = '';
@@ -64,86 +231,6 @@
             `.name { font-size: ${0.8 * squareSide}px; fill: black; text-anchor: end }\n` +
             `.border { stroke-width: ${squareSide / 25}px; stroke: #bbbbbb; fill: transparent; }\n`;
         makeSvgNode('style', {}, svg, style);
-    }
-
-    function makeVoteBox(votes, x, y) {
-        if (!Array.isArray(votes)) {
-            votes = [votes];
-        }
-        const g = makeSvgNode(
-            'g',
-            {transform: `translate(${x},${y})`},
-            svg
-        );
-        if (votes.length === 2) {
-            makeSvgNode(
-                'polygon',
-                {
-                    points: `0,0 ${squareSide},0 0,${squareSide}`,
-                    class: votes[0],
-                },
-                g
-            );
-            makeSvgNode(
-                'polygon',
-                {
-                    points: `${squareSide},0 ${squareSide},${squareSide} 0,${squareSide}`,
-                    class: votes[1],
-                },
-                g
-            );
-            makeSvgNode(
-                'text',
-                {
-                    x: 0.1 * squareSide,
-                    y: 0.45 * squareSide,
-                    class: 'letter',
-                },
-                g,
-                votes[0]
-            );
-            makeSvgNode(
-                'text',
-                {
-                    x: 0.6 * squareSide,
-                    y: 0.85 * squareSide,
-                    class: 'letter',
-                },
-                g,
-                votes[1]
-            );
-        }
-        else {
-            makeSvgNode(
-                'rect',
-                {
-                    width: squareSide,
-                    height: squareSide,
-                    class: votes[0],
-                },
-                g
-            );
-            makeSvgNode(
-                'text',
-                {
-                    x: 0.35 * squareSide,
-                    y: 0.65 * squareSide,
-                    class: 'letter',
-                },
-                g,
-                votes[0]
-            );
-        }
-        makeSvgNode(
-            'rect',
-            {
-                width: squareSide,
-                height: squareSide,
-                class: 'border',
-            },
-            g
-        );
-        return g;
     }
 
     function makeSvgNode(name, attr, parent, child) {
@@ -161,22 +248,6 @@
             parent.appendChild(node);
         }
         return node;
-    }
-
-    function move(node, to) {
-        const m = node.getAttribute('transform').match(/([-\d.]+)[, ]+([-\d.]+)/);
-        const from = [+m[1], +m[2]];
-        const steps = 60;
-        const time = 500;
-        for (let i = 0; i < steps; i++) {
-            const frac = (i + 1) / steps;
-            const x = from[0] + frac * (to[0] - from[0]);
-            const y = from[1] + frac * (to[1] - from[1]);
-            setTimeout(
-                () => node.setAttribute('transform', `translate(${x},${y})`),
-                (i + 1) * time / steps
-            );
-        }
     }
 })();
 
