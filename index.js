@@ -190,7 +190,7 @@
         }
 
         nextBoxX() {
-            return 140 + this.count * 1.1 * boxWidth;
+            return 7.6 * boxHeight + this.count * 1.1 * boxWidth;
         }
 
         nextBoxY() {
@@ -201,7 +201,7 @@
             return makeSvgNode(
                 'text',
                 {
-                    x: 100,
+                    x: 5.8 * boxHeight, // approx length of "No endorsement" plus a little padding
                     y: this.nextBoxY() + 0.8 * boxHeight,
                     class: 'name',
                 },
@@ -214,7 +214,7 @@
             return makeSvgNode(
                 'text',
                 {
-                    x: 125,
+                    x: 7.1 * boxHeight,
                     y: this.nextBoxY() + 0.8 * boxHeight,
                     class: 'count',
                 },
@@ -362,4 +362,3 @@
         return node;
     }
 })();
-
