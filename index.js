@@ -17,7 +17,6 @@
         Z: 'Zhang',
         N: 'No endorsement',
     };
-    const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
     const boxHeight = 16;
     const boxWidth = boxHeight;
     const boxGap = 0.1 * boxWidth;
@@ -60,7 +59,7 @@
                     'text',
                     {
                         x: 0.25 * boxWidth,
-                        y: (0.25 * boxHeight) + (0.55 * letterFontSize),
+                        y: 0.25 * boxHeight + 0.55 * letterFontSize,
                         class: 'letter',
                     },
                     g,
@@ -70,7 +69,7 @@
                     'text',
                     {
                         x: 0.75 * boxWidth,
-                        y: (0.75 * boxHeight) + (0.2 * letterFontSize),
+                        y: 0.75 * boxHeight + 0.2 * letterFontSize,
                         class: 'letter',
                     },
                     g,
@@ -91,7 +90,7 @@
                     'text',
                     {
                         x: 0.5 * boxWidth,
-                        y: 0.65 * boxHeight,
+                        y: 0.5 * boxHeight + 0.3 * letterFontSize,
                         class: 'letter',
                     },
                     g,
@@ -158,9 +157,11 @@
 
     class Candidate {
 
-        constructor(abbr, index) {
+        constructor(abbr, index, collection) {
+            const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
             this.abbr = abbr;
             this.index = index;
+            this.collection = collection;
             this.count = 0;
             this.boxes = [];
             this.name = candidateNames[this.abbr];
@@ -193,11 +194,11 @@
         }
 
         nextBoxX() {
-            return 7.6 * boxHeight + this.count * (boxWidth + boxGap);
+            return 7.3 * boxHeight + this.count * (boxWidth + boxGap);
         }
 
         nextBoxY() {
-            return 5 + this.index * (boxHeight + candidateGap);
+            return this.index * (boxHeight + candidateGap);
         }
 
         makeNode() {
@@ -214,7 +215,7 @@
             return makeSvgNode(
                 'text',
                 {
-                    x: 5.8 * boxHeight, // approx length of "No endorsement" plus a little padding
+                    x: 5.5 * boxHeight, // approx length of "No endorsement" plus a little padding
                     y: 1.1 * nameFontSize,
                     class: 'name',
                 },
@@ -227,7 +228,7 @@
             return makeSvgNode(
                 'text',
                 {
-                    x: 7.1 * boxHeight,
+                    x: 6.8 * boxHeight,
                     y: 1.1 * nameFontSize,
                     class: 'count',
                 },
@@ -251,6 +252,10 @@
 
         eliminated() {
             return this.count === 0;
+        }
+
+        bottomY() {
+            return this.count * (boxHeight + candidateGap) - candidateGap;
         }
 
     }
@@ -295,6 +300,7 @@
     const candidateCollection = new CandidateCollection(Object.keys(candidateNames));
     insertStyle();
     voteList.forEach(votes => candidateCollection.get(votes[0]).addBox(votes));
+    setSvgHeight();
     const result = writeExplanation();
     if (result === true) {
         document.getElementById('play-button').addEventListener('click', () => doRounds(false));
@@ -388,6 +394,13 @@
             `.count { font-size: ${nameFontSize}px; fill: blue; text-anchor: end }\n` +
             `.border { stroke-width: ${boxHeight / 25}px; stroke: #bbbbbb; fill: transparent; }\n`;
         styleNode.innerHTML = styleContent;
+    }
+
+    function setSvgHeight() {
+        svg.setAttribute(
+            'viewBox',
+            svg.getAttribute('viewBox').replace(/\d+$/, candidateCollection.bottomY() + 1)
+        );
     }
 
     function makeSvgNode(name, attr, parent, child) {
