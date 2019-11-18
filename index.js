@@ -20,6 +20,10 @@
     const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
     const boxHeight = 16;
     const boxWidth = boxHeight;
+    const boxGap = 0.1 * boxWidth;
+    const candidateGap = boxHeight;
+    const nameFontSize = 0.75 * boxHeight;
+    const letterFontSize = 0.45 * boxHeight;
     const svg = makeSvgNode(
         'svg',
         {viewBox: '0,0 1000,300', width: '100%'},
@@ -56,7 +60,7 @@
                     'text',
                     {
                         x: 0.25 * boxWidth,
-                        y: 0.45 * boxHeight,
+                        y: (0.25 * boxHeight) + (0.55 * letterFontSize),
                         class: 'letter',
                     },
                     g,
@@ -66,7 +70,7 @@
                     'text',
                     {
                         x: 0.75 * boxWidth,
-                        y: 0.85 * boxHeight,
+                        y: (0.75 * boxHeight) + (0.2 * letterFontSize),
                         class: 'letter',
                     },
                     g,
@@ -161,6 +165,7 @@
             this.boxes = [];
             this.name = candidateNames[this.abbr];
             this.color = this.abbr === 'N' ? '#888888' : colors[this.index];
+            this.node = this.makeNode();
             this.nameNode = this.makeNameNode();
             this.countNode = this.makeCountNode();
         }
@@ -188,11 +193,21 @@
         }
 
         nextBoxX() {
-            return 7.6 * boxHeight + this.count * 1.1 * boxWidth;
+            return 7.6 * boxHeight + this.count * (boxWidth + boxGap);
         }
 
         nextBoxY() {
-            return 5 + this.index * 2 * boxHeight;
+            return 5 + this.index * (boxHeight + candidateGap);
+        }
+
+        makeNode() {
+            const x = 0;
+            const y = this.nextBoxY();
+            return makeSvgNode(
+                'g',
+                {transform: `translate(${x},${y})`},
+                svg
+            );
         }
 
         makeNameNode() {
@@ -200,10 +215,10 @@
                 'text',
                 {
                     x: 5.8 * boxHeight, // approx length of "No endorsement" plus a little padding
-                    y: this.nextBoxY() + 0.8 * boxHeight,
+                    y: 1.1 * nameFontSize,
                     class: 'name',
                 },
-                svg,
+                this.node,
                 this.name
             );
         }
@@ -213,10 +228,10 @@
                 'text',
                 {
                     x: 7.1 * boxHeight,
-                    y: this.nextBoxY() + 0.8 * boxHeight,
+                    y: 1.1 * nameFontSize,
                     class: 'count',
                 },
-                svg,
+                this.node,
                 this.count.toString()
             );
         }
@@ -368,9 +383,9 @@
     function insertStyle() {
         let styleContent = '';
         candidateCollection.all().forEach(c => styleContent += `.${c.abbr} { fill: ${c.color} }\n`);
-        styleContent += `.letter { font-size: ${0.45 * boxHeight}px; fill: black; text-anchor: middle }\n` +
-            `.name { font-size: ${0.75 * boxHeight}px; fill: black; text-anchor: end }\n` +
-            `.count { font-size: ${0.75 * boxHeight}px; fill: blue; text-anchor: end }\n` +
+        styleContent += `.letter { font-size: ${letterFontSize}px; fill: black; text-anchor: middle }\n` +
+            `.name { font-size: ${nameFontSize}px; fill: black; text-anchor: end }\n` +
+            `.count { font-size: ${nameFontSize}px; fill: blue; text-anchor: end }\n` +
             `.border { stroke-width: ${boxHeight / 25}px; stroke: #bbbbbb; fill: transparent; }\n`;
         styleNode.innerHTML = styleContent;
     }
