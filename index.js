@@ -8,7 +8,7 @@
         .map(v => v.split(''));
     const ballotCount = voteList.length;
     const endorsementThreshold = ballotCount * 2 / 3;
-    const candidates = {
+    const candidateNames = {
         F: 'Fanning',
         G: 'Grossman',
         H: 'Hernandez',
@@ -18,17 +18,7 @@
         N: 'No endorsement',
     };
     const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
-    const candidateColor = {};
-    const candidateIndex = {};
-    const candidateCount = {};
-    const voteBoxes = {};
-    Object.keys(candidates).forEach(function (c, i) {
-        candidateColor[c] = colors[i];
-        candidateIndex[c] = i;
-        candidateCount[c] = 0;
-        voteBoxes[c] = [];
-    });
-    candidateColor['N'] = '#888888';
+    const candidates = {};
     const boxHeight = 16;
     const boxWidth = boxHeight;
     const svg = makeSvgNode(
@@ -36,7 +26,7 @@
         {viewBox: '0,0 1000,300', width: '100%'},
         document.getElementById('figure-container')
     );
-    makeStyle();
+    const styleNode = makeSvgNode('style', {}, svg, '');
 
     class VoteBox {
 
@@ -163,26 +153,98 @@
 
     }
 
-    Object.keys(candidates).forEach(function (candidate) {
-        makeSvgNode(
-            'text',
-            {
-                x: 100,
-                y: candidateY(candidate) + 0.8 * boxHeight,
-                class: 'name',
-            },
-            svg,
-            candidates[candidate]
-        );
-    });
-    voteList.forEach(function (votes) {
-        const candidate = votes[0];
-        const x = candidateX(candidate);
-        const y = candidateY(candidate);
-        candidateCount[candidate]++;
-        voteBoxes[candidate].push(new VoteBox(votes, [x, y]));
-    });
-    writeCounts();
+    class Candidate {
+
+        constructor(abbr) {
+            this.abbr = abbr;
+            this.count = 0;
+            this.boxes = [];
+            this.name = candidateNames[this.abbr];
+            this.color = this.abbr === 'N' ? '#888888' : colors.shift();
+            this.index = Object.keys(candidates).length;
+            this.nameNode = this.makeNameNode();
+            this.countNode = this.makeCountNode();
+            candidates[this.abbr] = this;
+        }
+
+        addBox(votes) {
+            const pos = [this.nextBoxX(), this.nextBoxY()];
+            this.incrementCount();
+            let box;
+            let promise;
+            if (votes instanceof VoteBox) {
+                box = votes;
+                promise = box.moveTo(pos);
+            }
+            else {
+                box = new VoteBox(votes, pos);
+                promise = Promise.resolve();
+            }
+            this.boxes.push(box);
+            return promise;
+        }
+
+        removeBox(box) {
+            this.boxes = this.boxes.filter(b => b !== box);
+            this.decrementCount();
+        }
+
+        nextBoxX() {
+            return 140 + this.count * 1.1 * boxWidth;
+        }
+
+        nextBoxY() {
+            return 5 + this.index * 2 * boxHeight;
+        }
+
+        makeNameNode() {
+            return makeSvgNode(
+                'text',
+                {
+                    x: 100,
+                    y: this.nextBoxY() + 0.8 * boxHeight,
+                    class: 'name',
+                },
+                svg,
+                this.name
+            );
+        }
+
+        makeCountNode() {
+            return makeSvgNode(
+                'text',
+                {
+                    x: 125,
+                    y: this.nextBoxY() + 0.8 * boxHeight,
+                    class: 'count',
+                },
+                svg,
+                this.count.toString()
+            );
+        }
+
+        incrementCount(amount = 1) {
+            this.count += amount;
+            this.updateCount();
+        }
+
+        decrementCount(amount = 1) {
+            this.incrementCount(-amount);
+        }
+
+        updateCount() {
+            this.countNode.innerHTML = this.count;
+        }
+
+        eliminated() {
+            return this.count === 0;
+        }
+
+    }
+
+    Object.keys(candidateNames).forEach(abbr => candidates[abbr] = new Candidate(abbr));
+    insertStyle();
+    voteList.forEach(votes => candidates[votes[0]].addBox(votes));
     const result = writeExplanation();
     if (result === true) {
         document.getElementById('play-button').addEventListener('click', () => doRounds(false));
@@ -196,16 +258,16 @@
     function doRounds(keepGoing) {
         document.getElementById('play-button').disabled = true;
         document.getElementById('forward-button').disabled = true;
-        const sortedCandidates = Object.keys(voteBoxes)
-            .filter(c => c !== 'N')
-            .sort((a, b) => candidateCount[a] - candidateCount[b]);
+        const sortedCandidates = Object.values(candidates)
+            .filter(c => c.abbr !== 'N' && c.count > 0)
+            .sort((a, b) => a.count - b.count);
         const bottomCandidate = sortedCandidates.shift();
         document.getElementById('explanation1').innerHTML =
-            `${candidates[bottomCandidate]} is eliminated, and each of those ${candidateCount[bottomCandidate]}
+            `${bottomCandidate.name} is eliminated, and each of those ${bottomCandidate.count}
             votes is transferred to the second-choice candidate for that ballot. If there is no second choice, or
             if the second choice has already been eliminated, the vote is transferred to "No endorsement".`;
         document.getElementById('explanation2').innerHTML = '';
-        const boxesToMove = voteBoxes[bottomCandidate].reverse();
+        const boxesToMove = [...bottomCandidate.boxes].reverse();
         const boxGroups = [];
         let prev = '';
         boxesToMove.forEach(function (box) {
@@ -217,19 +279,15 @@
         });
         const tasks = boxGroups.map(function (boxGroup) {
             return function () {
-                candidateCount[bottomCandidate] -= boxGroup.length;
-                writeCounts();
                 const promises = boxGroup.map(function (box) {
-                    let toCandidate = box.useNextChoice() || 'N';
-                    if (!voteBoxes[toCandidate]) {
-                        toCandidate = 'N';
+                    bottomCandidate.removeBox(box);
+                    let toCandidate = candidates[box.useNextChoice() || 'N'];
+                    if (toCandidate.eliminated()) {
+                        toCandidate = candidates['N'];
                     }
-                    voteBoxes[toCandidate].push(box);
-                    const pos = [candidateX(toCandidate), candidateY(toCandidate)];
-                    candidateCount[toCandidate]++;
-                    return box.moveTo(pos);
+                    return toCandidate.addBox(box);
                 });
-                return Promise.all(promises).then(writeCounts);
+                return Promise.all(promises);
             };
         });
         return tasks.reduce(
@@ -237,7 +295,6 @@
             Promise.resolve()
         )
             .then(function () {
-                delete voteBoxes[bottomCandidate];
                 const result = writeExplanation();
                 if (result !== true) {
                     return result;
@@ -254,65 +311,38 @@
     }
 
     function writeExplanation() {
-        const sortedCandidates = Object.keys(voteBoxes)
-            .filter(c => c !== 'N')
-            .sort((a, b) => candidateCount[b] - candidateCount[a]);
+        const sortedCandidates = Object.values(candidates)
+            .filter(c => c.abbr !== 'N' && c.count > 0)
+            .sort((a, b) => b.count - a.count);
         const topCandidate = sortedCandidates[0];
-        const winner = candidateCount[topCandidate] >= endorsementThreshold ? topCandidate : null;
+        const winner = topCandidate.count >= endorsementThreshold ? topCandidate : null;
         const explanation2 = document.getElementById('explanation2');
-        const percent = (100 * candidateCount[topCandidate] / ballotCount).toFixed(2);
+        const percent = (100 * topCandidate.count / ballotCount).toFixed(2);
         explanation2.innerHTML =
-            `${candidates[topCandidate]} has ${candidateCount[topCandidate]} votes, or ${percent}%, ` +
+            `${topCandidate.name} has ${topCandidate.count} votes, or ${percent}%, ` +
             (winner ? 'and has reached' : 'short of') +
             ` the two thirds (${Math.ceil(endorsementThreshold)} votes) needed for endorsement. `;
         if (winner || sortedCandidates.length < 2) {
             explanation2.innerHTML += winner
-                ? `<strong>${candidates[topCandidate]} is endorsed.</strong>`
+                ? `<strong>${topCandidate.name} is endorsed.</strong>`
                 : 'No candidates are left to be eliminated. <strong>There is no endorsement.</strong>';
             return winner;
         }
-        const candidatesEliminated = Object.keys(candidates) - 1 - sortedCandidates.length;
+        const candidatesEliminated = Object.keys(candidates).length - 1 - sortedCandidates.length;
         explanation2.innerHTML += candidatesEliminated
             ? 'The process continues.'
             : 'Second votes must be examined. Click a button to do one step or the entire process.';
         return true;
     }
 
-    function writeCounts() {
-        const countNodes = document.getElementsByClassName('count');
-        while (countNodes.length) {
-            countNodes[0].parentNode.removeChild(countNodes[0]);
-        }
-        Object.keys(candidates).forEach(function (candidate) {
-            makeSvgNode(
-                'text',
-                {
-                    x: 125,
-                    y: candidateY(candidate) + 0.8 * boxHeight,
-                    class: 'count',
-                },
-                svg,
-                candidateCount[candidate].toString()
-            );
-        });
-    }
-
-    function candidateX(candidate) {
-        return 140 + candidateCount[candidate] * 1.1 * boxWidth;
-    }
-
-    function candidateY(candidate) {
-        return 5 + candidateIndex[candidate] * 2 * boxHeight;
-    }
-
-    function makeStyle() {
-        let style = '';
-        Object.keys(candidateColor).forEach(c => style += `.${c} { fill: ${candidateColor[c]} }\n`);
-        style += `.letter { font-size: ${0.45 * boxHeight}px; fill: black; text-anchor: middle }\n` +
+    function insertStyle() {
+        let styleContent = '';
+        Object.values(candidates).forEach(c => styleContent += `.${c.abbr} { fill: ${c.color} }\n`);
+        styleContent += `.letter { font-size: ${0.45 * boxHeight}px; fill: black; text-anchor: middle }\n` +
             `.name { font-size: ${0.75 * boxHeight}px; fill: black; text-anchor: end }\n` +
             `.count { font-size: ${0.75 * boxHeight}px; fill: blue; text-anchor: end }\n` +
             `.border { stroke-width: ${boxHeight / 25}px; stroke: #bbbbbb; fill: transparent; }\n`;
-        makeSvgNode('style', {}, svg, style);
+        styleNode.innerHTML = styleContent;
     }
 
     function makeSvgNode(name, attr, parent, child) {
