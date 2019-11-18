@@ -18,7 +18,6 @@
         N: 'No endorsement',
     };
     const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
-    const candidates = {};
     const boxHeight = 16;
     const boxWidth = boxHeight;
     const svg = makeSvgNode(
@@ -155,16 +154,15 @@
 
     class Candidate {
 
-        constructor(abbr) {
+        constructor(abbr, index) {
             this.abbr = abbr;
+            this.index = index;
             this.count = 0;
             this.boxes = [];
             this.name = candidateNames[this.abbr];
-            this.color = this.abbr === 'N' ? '#888888' : colors.shift();
-            this.index = Object.keys(candidates).length;
+            this.color = this.abbr === 'N' ? '#888888' : colors[this.index];
             this.nameNode = this.makeNameNode();
             this.countNode = this.makeCountNode();
-            candidates[this.abbr] = this;
         }
 
         addBox(votes) {
@@ -242,9 +240,46 @@
 
     }
 
-    Object.keys(candidateNames).forEach(abbr => candidates[abbr] = new Candidate(abbr));
+    class CandidateCollection {
+
+        constructor(candidateAbbrs) {
+            this.candidates = {};
+            candidateAbbrs.forEach((abbr, i) => this.candidates[abbr] = new Candidate(abbr, i));
+            this.count = candidateAbbrs.length;
+        }
+
+        remainingCandidates() {
+            return this.all().filter(c => c.abbr !== 'N' && c.count > 0);
+        }
+
+        sortedRemainingCandidates() {
+            return this.remainingCandidates().sort(function (a, b) {
+                return (b.count - a.count) || (a.name > b.name ? 1 : a.name < b.name ? -1 : 0);
+            });
+        }
+
+        top() {
+            return this.sortedRemainingCandidates()[0];
+        }
+
+        bottom() {
+            const sorted = this.sortedRemainingCandidates();
+            return sorted[sorted.length - 1];
+        }
+
+        all() {
+            return Object.values(this.candidates);
+        }
+
+        get(abbr) {
+            return this.candidates[abbr];
+        }
+
+    }
+
+    const candidateCollection = new CandidateCollection(Object.keys(candidateNames));
     insertStyle();
-    voteList.forEach(votes => candidates[votes[0]].addBox(votes));
+    voteList.forEach(votes => candidateCollection.get(votes[0]).addBox(votes));
     const result = writeExplanation();
     if (result === true) {
         document.getElementById('play-button').addEventListener('click', () => doRounds(false));
@@ -258,10 +293,7 @@
     function doRounds(keepGoing) {
         document.getElementById('play-button').disabled = true;
         document.getElementById('forward-button').disabled = true;
-        const sortedCandidates = Object.values(candidates)
-            .filter(c => c.abbr !== 'N' && c.count > 0)
-            .sort((a, b) => a.count - b.count);
-        const bottomCandidate = sortedCandidates.shift();
+        const bottomCandidate = candidateCollection.bottom();
         document.getElementById('explanation1').innerHTML =
             `${bottomCandidate.name} is eliminated, and each of those ${bottomCandidate.count}
             votes is transferred to the second-choice candidate for that ballot. If there is no second choice, or
@@ -281,9 +313,9 @@
             return function () {
                 const promises = boxGroup.map(function (box) {
                     bottomCandidate.removeBox(box);
-                    let toCandidate = candidates[box.useNextChoice() || 'N'];
+                    let toCandidate = candidateCollection.get(box.useNextChoice() || 'N');
                     if (toCandidate.eliminated()) {
-                        toCandidate = candidates['N'];
+                        toCandidate = candidateCollection.get('N');
                     }
                     return toCandidate.addBox(box);
                 });
@@ -311,9 +343,7 @@
     }
 
     function writeExplanation() {
-        const sortedCandidates = Object.values(candidates)
-            .filter(c => c.abbr !== 'N' && c.count > 0)
-            .sort((a, b) => b.count - a.count);
+        const sortedCandidates = candidateCollection.sortedRemainingCandidates();
         const topCandidate = sortedCandidates[0];
         const winner = topCandidate.count >= endorsementThreshold ? topCandidate : null;
         const explanation2 = document.getElementById('explanation2');
@@ -328,7 +358,7 @@
                 : 'No candidates are left to be eliminated. <strong>There is no endorsement.</strong>';
             return winner;
         }
-        const candidatesEliminated = Object.keys(candidates).length - 1 - sortedCandidates.length;
+        const candidatesEliminated = candidateCollection.count - 1 - sortedCandidates.length;
         explanation2.innerHTML += candidatesEliminated
             ? 'The process continues.'
             : 'Second votes must be examined. Click a button to do one step or the entire process.';
@@ -337,7 +367,7 @@
 
     function insertStyle() {
         let styleContent = '';
-        Object.values(candidates).forEach(c => styleContent += `.${c.abbr} { fill: ${c.color} }\n`);
+        candidateCollection.all().forEach(c => styleContent += `.${c.abbr} { fill: ${c.color} }\n`);
         styleContent += `.letter { font-size: ${0.45 * boxHeight}px; fill: black; text-anchor: middle }\n` +
             `.name { font-size: ${0.75 * boxHeight}px; fill: black; text-anchor: end }\n` +
             `.count { font-size: ${0.75 * boxHeight}px; fill: blue; text-anchor: end }\n` +
