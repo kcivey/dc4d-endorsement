@@ -277,14 +277,14 @@
     class EndorsementFigure {
 
         constructor(candidateNames, voteList) {
-            this.setDimensions();
             const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
-            this.width = 1000;
-            const {boxWidth, boxHeight, boxGap, candidateGap} = this.dimensions;
-            this.maxBoxesPerRow = Math.floor((this.width - 7.3 * boxHeight) / (boxWidth - boxGap));
+            const candidateAbbrs = Object.keys(candidateNames);
+            this.candidateCount = candidateAbbrs.length;
+            this.setDimensions();
+            const {boxHeight, candidateGap} = this.dimensions;
             this.node = this.makeNode();
             const figure = this;
-            this.candidates = Object.keys(candidateNames)
+            this.candidates = candidateAbbrs
                 .map(function (abbr, i) {
                     return new Candidate({
                         abbr,
@@ -296,8 +296,6 @@
                     });
                 });
             this.addStyle();
-            this.candidateCount = this.candidates.length;
-            this.height = this.candidateCount * (boxHeight + candidateGap) - candidateGap;
             this.ballotCount = voteList.length;
             this.endorsementThreshold = this.ballotCount * 2 / 3;
             this.adjustSvgHeight();
@@ -307,17 +305,24 @@
         }
 
         setDimensions() {
-            const boxHeight = 16;
+            this.width = 1000;
+            const pixelsPerUnit = window.innerWidth / this.width;
+            const boxHeightPixels = Math.max(16 * pixelsPerUnit, 25);
+            const boxHeight = boxHeightPixels / pixelsPerUnit;
             const boxWidth = boxHeight;
+            const boxGap = 0.1 * boxWidth;
+            const candidateGap = boxHeight;
+            this.height = this.candidateCount * (boxHeight + candidateGap) - candidateGap;
             this.dimensions = {
                 boxWidth,
                 boxHeight,
-                boxGap: 0.1 * boxWidth,
-                candidateGap: boxHeight,
+                boxGap,
+                candidateGap,
                 nameFontSize: 0.75 * boxHeight,
                 letterFontSize: 0.45 * boxHeight,
                 strokeWidth: boxHeight / 25,
             };
+            this.maxBoxesPerRow = Math.floor((this.width - 7.3 * boxHeight) / (boxWidth + boxGap));
         }
 
         makeNode() {
@@ -356,10 +361,6 @@
 
         topCandidate() {
             return this.sortedRemainingCandidates()[0];
-        }
-
-        candidateY(i) {
-            return this.getCandidate(i).index * (this.dimensions.boxHeight + this.dimensions.candidateGap);
         }
 
         bottomCandidate() {
