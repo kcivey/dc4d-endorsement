@@ -17,15 +17,18 @@
         Z: 'Zhang',
         N: 'No endorsement',
     };
+    const defaultMoveTime = 500;
     const boxHeight = 16;
     const boxWidth = boxHeight;
     const boxGap = 0.1 * boxWidth;
     const candidateGap = boxHeight;
     const nameFontSize = 0.75 * boxHeight;
     const letterFontSize = 0.45 * boxHeight;
+    const svgWidth = 1000;
+    const maxBoxesPerRow = Math.floor((svgWidth - 7.3 * boxHeight) / (boxWidth - boxGap));
     const svg = makeSvgNode(
         'svg',
-        {viewBox: '0,0 1000,300', width: '100%'},
+        {viewBox: `0,0 ${svgWidth},${svgWidth}`, width: '100%'},
         document.getElementById('figure-container')
     );
     const styleNode = makeSvgNode('style', {}, svg, '');
@@ -125,66 +128,38 @@
             return this.votes[1];
         }
 
-        moveTo(to) {
-            const from = [this.pos[0], this.pos[1]];
-            const time = 500;
-            const steps = Math.round(time / 40);
-            const that = this;
-            return new Promise(function (resolve) {
-                for (let i = 0; i < steps; i++) {
-                    const frac = easing((i + 1) / steps);
-                    const x = from[0] + frac * (to[0] - from[0]);
-                    const y = from[1] + frac * (to[1] - from[1]);
-                    setTimeout(
-                        function () {
-                            that.pos = [x, y];
-                            that.node.setAttribute('transform', `translate(${x},${y})`);
-                            if (frac >= 1) {
-                                resolve();
-                            }
-                        },
-                        frac * time
-                    );
-                }
-            });
-
-            function easing(t) {
-                return 1 - Math.pow(1 - t, 3);
-            }
+        moveTo(to, time = defaultMoveTime) {
+            const from = this.pos;
+            this.pos = to;
+            return moveNode(this.node, from, to, time);
         }
 
     }
 
     class Candidate {
 
-        constructor(abbr, index, collection) {
-            const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
-            this.abbr = abbr;
-            this.index = index;
-            this.collection = collection;
+        constructor(properties) {
+            Object.assign(this, properties);
             this.count = 0;
             this.boxes = [];
-            this.name = candidateNames[this.abbr];
-            this.color = this.abbr === 'N' ? '#888888' : colors[this.index];
             this.node = this.makeNode();
             this.nameNode = this.makeNameNode();
             this.countNode = this.makeCountNode();
         }
 
-        addBox(votes) {
-            const pos = [this.nextBoxX(), this.nextBoxY()];
-            this.incrementCount();
-            let box;
-            let promise;
-            if (votes instanceof VoteBox) {
-                box = votes;
-                promise = box.moveTo(pos);
+        addBox(box) {
+            const that = this;
+            const pos = [that.nextBoxX(), that.nextBoxY()];
+            const isNew = !(box instanceof VoteBox);
+            if (isNew) { // argument is votes
+                box = new VoteBox(box, pos);
             }
-            else {
-                box = new VoteBox(votes, pos);
-                promise = Promise.resolve();
+            let promise = that.rowFull() ? that.expand(isNew ? 0 : 500) : Promise.resolve();
+            that.incrementCount();
+            if (!isNew) {
+                promise = promise.then(() => box.moveTo(pos));
             }
-            this.boxes.push(box);
+            that.boxes.push(box);
             return promise;
         }
 
@@ -194,16 +169,24 @@
         }
 
         nextBoxX() {
-            return 7.3 * boxHeight + this.count * (boxWidth + boxGap);
+            return 7.3 * boxHeight + (this.count % maxBoxesPerRow) * (boxWidth + boxGap);
         }
 
         nextBoxY() {
-            return this.index * (boxHeight + candidateGap);
+            return this.y + (this.boxRows() - (this.rowFull() ? 0 : 1)) * (boxHeight + boxGap);
+        }
+
+        rowFull() {
+            return (this.count % maxBoxesPerRow) === 0 && this.count > 0;
+        }
+
+        boxRows() {
+            return Math.max(0, Math.floor((this.count - 1) / maxBoxesPerRow)) + 1;
         }
 
         makeNode() {
             const x = 0;
-            const y = this.nextBoxY();
+            const y = this.y;
             return makeSvgNode(
                 'g',
                 {transform: `translate(${x},${y})`},
@@ -254,8 +237,17 @@
             return this.count === 0;
         }
 
-        bottomY() {
-            return this.count * (boxHeight + candidateGap) - candidateGap;
+        moveDown(amount, time = defaultMoveTime) {
+            const fromY = this.y;
+            this.y += amount;
+            return Promise.all([
+                ...this.boxes.map(b => b.moveTo([b.pos[0], b.pos[1] + amount], time)),
+                moveNode(this.node, [0, fromY], [0, this.y], time),
+            ]);
+        }
+
+        expand(time = defaultMoveTime) {
+            return this.collection.expandCandidate(this.index, time);
         }
 
     }
@@ -263,9 +255,21 @@
     class CandidateCollection {
 
         constructor(candidateAbbrs) {
-            this.candidates = {};
-            candidateAbbrs.forEach((abbr, i) => this.candidates[abbr] = new Candidate(abbr, i));
-            this.count = candidateAbbrs.length;
+            const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
+            const collection = this;
+            this.candidates = candidateAbbrs.map(function (abbr, i) {
+                return new Candidate({
+                    abbr,
+                    index: i,
+                    collection,
+                    color: abbr === 'N' ? '#888888' : colors[i],
+                    name: candidateNames[abbr],
+                    y: i * (boxHeight + candidateGap),
+                });
+            });
+            this.count = this.candidates.length;
+            this.height = this.count * (boxHeight + candidateGap) - candidateGap;
+            this.adjustSvgHeight();
         }
 
         remainingCandidates() {
@@ -278,11 +282,15 @@
             });
         }
 
-        top() {
+        topCandidate() {
             return this.sortedRemainingCandidates()[0];
         }
 
-        bottom() {
+        candidateY(i) {
+            return this.get(i).index * (boxHeight + candidateGap);
+        }
+
+        bottomCandidate() {
             const sorted = this.sortedRemainingCandidates();
             return sorted[sorted.length - 1];
         }
@@ -292,29 +300,50 @@
         }
 
         get(abbr) {
-            return this.candidates[abbr];
+            return this.candidates.find(c => c.abbr === abbr || c.index === abbr);
+        }
+
+        expandCandidate(abbr, time = defaultMoveTime) {
+            const candidate = this.get(abbr);
+            const distance = boxHeight + boxGap;
+            this.height += distance;
+            this.adjustSvgHeight();
+            const promises = [];
+            for (let i = candidate.index + 1; i < this.count; i++) {
+                promises.push(this.get(i).moveDown(distance, time));
+            }
+            return Promise.all(promises);
+        }
+
+        adjustSvgHeight() {
+            svg.setAttribute(
+                'viewBox',
+                svg.getAttribute('viewBox').replace(/[\d.]+$/, this.height + 1)
+            );
         }
 
     }
 
     const candidateCollection = new CandidateCollection(Object.keys(candidateNames));
     insertStyle();
-    voteList.forEach(votes => candidateCollection.get(votes[0]).addBox(votes));
-    setSvgHeight();
-    const result = writeExplanation();
-    if (result === true) {
-        document.getElementById('play-button').addEventListener('click', () => doRounds(false));
-        document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
-    }
-    else {
-        document.getElementById('play-button').disabled = true;
-        document.getElementById('forward-button').disabled = true;
-    }
+    Promise.all(
+        voteList.map(votes => candidateCollection.get(votes[0]).addBox(votes))
+    ).then(function () {
+        const result = writeExplanation();
+        if (result === true) {
+            document.getElementById('play-button').addEventListener('click', () => doRounds(false));
+            document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
+        }
+        else {
+            document.getElementById('play-button').disabled = true;
+            document.getElementById('forward-button').disabled = true;
+        }
+    });
 
     function doRounds(keepGoing) {
         document.getElementById('play-button').disabled = true;
         document.getElementById('forward-button').disabled = true;
-        const bottomCandidate = candidateCollection.bottom();
+        const bottomCandidate = candidateCollection.bottomCandidate();
         document.getElementById('explanation1').innerHTML =
             `${bottomCandidate.name} is eliminated, and each of those ${bottomCandidate.count}
             votes is transferred to the second-choice candidate for that ballot. If there is no second choice, or
@@ -344,7 +373,7 @@
             };
         });
         return tasks.reduce(
-            (promiseChain, currentTask) => promiseChain = promiseChain.then(currentTask),
+            (promiseChain, currentTask) => promiseChain.then(currentTask),
             Promise.resolve()
         )
             .then(function () {
@@ -354,7 +383,7 @@
                 }
                 if (keepGoing) {
                     return new Promise(function (resolve) {
-                        setTimeout(() => resolve(doRounds(true)), 500);
+                        setTimeout(() => resolve(doRounds(true)), defaultMoveTime);
                     });
                 }
                 document.getElementById('play-button').disabled = false;
@@ -396,13 +425,6 @@
         styleNode.innerHTML = styleContent;
     }
 
-    function setSvgHeight() {
-        svg.setAttribute(
-            'viewBox',
-            svg.getAttribute('viewBox').replace(/\d+$/, candidateCollection.bottomY() + 1)
-        );
-    }
-
     function makeSvgNode(name, attr, parent, child) {
         const node = document.createElementNS('http://www.w3.org/2000/svg', name);
         if (!attr) {
@@ -418,5 +440,29 @@
             parent.appendChild(node);
         }
         return node;
+    }
+
+    function moveNode(node, from, to, time = defaultMoveTime) {
+        const steps = Math.max(1, Math.round(time / 40));
+        return new Promise(function (resolve) {
+            for (let i = 0; i < steps; i++) {
+                const frac = easing((i + 1) / steps);
+                const x = from[0] + frac * (to[0] - from[0]);
+                const y = from[1] + frac * (to[1] - from[1]);
+                setTimeout(
+                    function () {
+                        node.setAttribute('transform', `translate(${x},${y})`);
+                        if (frac >= 1) {
+                            resolve();
+                        }
+                    },
+                    frac * time
+                );
+            }
+        });
+
+        function easing(t) {
+            return 1 - Math.pow(1 - t, 3);
+        }
     }
 })();
