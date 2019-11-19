@@ -405,10 +405,15 @@
         }
 
         adjustSvgHeight() {
-            this.node.setAttribute(
-                'viewBox',
-                this.node.getAttribute('viewBox').replace(/[\d.]+$/, this.height + 1)
-            );
+            const wantedHeight = this.height + 1;
+            const viewBox = this.node.getAttribute('viewBox');
+            const svgHeight = viewBox.match(/[\d.]+$/)[0];
+            if (svgHeight < wantedHeight) {
+                this.node.setAttribute(
+                    'viewBox',
+                    viewBox.replace(/[\d.]+$/, this.height + 1)
+                );
+            }
         }
 
     }
