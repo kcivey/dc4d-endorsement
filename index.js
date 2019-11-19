@@ -145,6 +145,7 @@
             this.node = this.makeNode();
             this.nameNode = this.makeNameNode();
             this.countNode = this.makeCountNode();
+            this.eliminated = false;
         }
 
         addBox(box) {
@@ -233,10 +234,6 @@
             this.countNode.innerHTML = this.count;
         }
 
-        eliminated() {
-            return this.count === 0;
-        }
-
         moveDown(amount, time = defaultMoveTime) {
             const fromY = this.y;
             this.y += amount;
@@ -246,8 +243,35 @@
             ]);
         }
 
+        moveUp(amount, time = defaultMoveTime) {
+            return this.moveDown(-amount, time);
+        }
+
         expand(time = defaultMoveTime) {
-            return this.collection.expandCandidate(this.index, time);
+            return this.collection.expandCandidate(this, time);
+        }
+
+        eliminate() {
+            this.eliminated = true;
+            const time = defaultMoveTime;
+            const steps = Math.max(1, Math.round(time / 40));
+            const node = this.node;
+            return new Promise(function (resolve) {
+                for (let i = 0; i < steps; i++) {
+                    const frac = (i + 1) / steps;
+                    const opacity = 1 - frac;
+                    setTimeout(
+                        function () {
+                            node.setAttribute('style', `opacity: ${opacity}`);
+                            if (frac >= 1) {
+                                node.remove();
+                                resolve();
+                            }
+                        },
+                        frac * time
+                    );
+                }
+            });
         }
 
     }
@@ -273,7 +297,7 @@
         }
 
         remainingCandidates() {
-            return this.all().filter(c => c.abbr !== 'N' && c.count > 0);
+            return this.all().filter(c => c.abbr !== 'N' && !c.eliminated);
         }
 
         sortedRemainingCandidates() {
@@ -303,16 +327,30 @@
             return this.candidates.find(c => c.abbr === abbr || c.index === abbr);
         }
 
-        expandCandidate(abbr, time = defaultMoveTime) {
-            const candidate = this.get(abbr);
+        expandCandidate(candidate, time = defaultMoveTime) {
             const distance = boxHeight + boxGap;
             this.height += distance;
-            this.adjustSvgHeight();
             const promises = [];
             for (let i = candidate.index + 1; i < this.count; i++) {
                 promises.push(this.get(i).moveDown(distance, time));
             }
-            return Promise.all(promises);
+            return Promise.all(promises)
+                .then(() => this.adjustSvgHeight());
+        }
+
+        eliminateCandidate(candidate, time = defaultMoveTime) {
+            const distance = candidate.boxRows() * (boxHeight + boxGap) - boxGap + candidateGap;
+            this.height -= distance;
+            const that = this;
+            return candidate.eliminate()
+                .then(function () {
+                    const promises = [];
+                    for (let i = candidate.index; i < that.count; i++) {
+                        promises.push(that.get(i).moveUp(distance, time));
+                    }
+                    return Promise.all(promises);
+                })
+                .then(() => this.adjustSvgHeight());
         }
 
         adjustSvgHeight() {
@@ -364,7 +402,7 @@
                 const promises = boxGroup.map(function (box) {
                     bottomCandidate.removeBox(box);
                     let toCandidate = candidateCollection.get(box.useNextChoice() || 'N');
-                    if (toCandidate.eliminated()) {
+                    if (toCandidate.eliminated) {
                         toCandidate = candidateCollection.get('N');
                     }
                     return toCandidate.addBox(box);
@@ -376,6 +414,7 @@
             (promiseChain, currentTask) => promiseChain.then(currentTask),
             Promise.resolve()
         )
+            .then(() => candidateCollection.eliminateCandidate(bottomCandidate))
             .then(function () {
                 const result = writeExplanation();
                 if (result !== true) {
