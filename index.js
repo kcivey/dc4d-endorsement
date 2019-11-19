@@ -20,6 +20,7 @@
     let figure;
     document.getElementById('play-button').addEventListener('click', () => doRounds(false));
     document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
+    document.getElementById('reset-button').addEventListener('click', () => start(candidateNames, voteList));
 
     class VoteBox {
 
@@ -415,12 +416,14 @@
     start(candidateNames, voteList);
 
     function start(candidateNames, voteList) {
+        document.getElementById('reset-button').disabled = true;
         figure = new EndorsementFigure(candidateNames, voteList);
     }
 
     function doRounds(keepGoing) {
         document.getElementById('play-button').disabled = true;
         document.getElementById('forward-button').disabled = true;
+        document.getElementById('reset-button').disabled = true;
         const bottomCandidate = figure.bottomCandidate();
         document.getElementById('explanation1').innerHTML =
             `${bottomCandidate.name} is eliminated, and each of those ${bottomCandidate.count}
@@ -468,6 +471,7 @@
                 }
                 document.getElementById('play-button').disabled = false;
                 document.getElementById('forward-button').disabled = false;
+                document.getElementById('reset-button').disabled = false;
                 return true;
             });
     }
@@ -487,7 +491,7 @@
                 ? `<strong>${topCandidate.name} is endorsed.</strong>`
                 : 'No candidates are left to be eliminated. <strong>There is no endorsement.</strong>';
             document.getElementById('play-button').disabled = true;
-            document.getElementById('forward-button').disabled = true;
+            document.getElementById('reset-button').disabled = true;
             return winner;
         }
         const candidatesEliminated = figure.candidateCount - 1 - sortedCandidates.length;
