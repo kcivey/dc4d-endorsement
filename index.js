@@ -387,8 +387,8 @@
                 .then(() => this.adjustSvgHeight());
         }
 
-        eliminateCandidate(candidate, time = defaultMoveTime) {
-            const distance = candidate.boxRows() * (this.dimensions.boxHeight + this.dimensions.boxGap) -
+        eliminateCandidate(candidate, boxRows = 1, time = defaultMoveTime) {
+            const distance = boxRows * (this.dimensions.boxHeight + this.dimensions.boxGap) -
                 this.dimensions.boxGap + this.dimensions.candidateGap;
             this.height -= distance;
             const that = this;
@@ -427,6 +427,7 @@
             votes is transferred to the second-choice candidate for that ballot. If there is no second choice, or
             if the second choice has already been eliminated, the vote is transferred to "No endorsement".`;
         document.getElementById('explanation2').innerHTML = '';
+        const boxRows = bottomCandidate.boxRows(); // save to use later, after boxes have been removed
         const boxesToMove = [...bottomCandidate.boxes].reverse();
         const boxGroups = [];
         let prev = '';
@@ -454,7 +455,7 @@
             (promiseChain, currentTask) => promiseChain.then(currentTask),
             Promise.resolve()
         )
-            .then(() => figure.eliminateCandidate(bottomCandidate))
+            .then(() => figure.eliminateCandidate(bottomCandidate, boxRows))
             .then(function () {
                 const result = writeExplanation();
                 if (result !== true) {
