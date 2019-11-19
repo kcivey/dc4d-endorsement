@@ -1,4 +1,5 @@
 (function () {
+    const containerId = 'figure-container';
     const voteList = ('PK FK KZ KF K KF K K K K K K K K K K G GK GK GP G GZ G GZ GZ G GK GZ G G G G G G G G G ' +
         'G G G G GZ GZ GK GH G GZ G GK PG ZG ZG ZG KG KG KG GP G GK GP GF GK F F F F F F F F FZ ZF PF PF Z ZP ' +
         'ZH PZ HZ HZ Z P HP N N S S A')
@@ -24,22 +25,17 @@
     const candidateGap = boxHeight;
     const nameFontSize = 0.75 * boxHeight;
     const letterFontSize = 0.45 * boxHeight;
-    const svgWidth = 1000;
-    const maxBoxesPerRow = Math.floor((svgWidth - 7.3 * boxHeight) / (boxWidth - boxGap));
-    const svg = makeSvgNode(
-        'svg',
-        {viewBox: `0,0 ${svgWidth},${svgWidth}`, width: '100%'},
-        document.getElementById('figure-container')
-    );
-    const styleNode = makeSvgNode('style', {}, svg, '');
+    let figure;
+    document.getElementById('play-button').addEventListener('click', () => doRounds(false));
+    document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
 
     class VoteBox {
 
-        constructor(votes, pos) {
-            const g = makeSvgNode(
+        constructor(votes, pos, parentNode) {
+            this.node = makeSvgNode(
                 'g',
                 {transform: `translate(${pos[0]},${pos[1]})`},
-                svg
+                parentNode
             );
             if (votes.length === 2) {
                 makeSvgNode(
@@ -48,7 +44,7 @@
                         points: `0,0 ${boxWidth},0 0,${boxHeight}`,
                         class: votes[0],
                     },
-                    g
+                    this.node
                 );
                 makeSvgNode(
                     'polygon',
@@ -56,7 +52,7 @@
                         points: `${boxWidth},0 ${boxWidth},${boxHeight} 0,${boxHeight}`,
                         class: votes[1],
                     },
-                    g
+                    this.node
                 );
                 makeSvgNode(
                     'text',
@@ -65,7 +61,7 @@
                         y: 0.25 * boxHeight + 0.55 * letterFontSize,
                         class: 'letter',
                     },
-                    g,
+                    this.node,
                     votes[0]
                 );
                 makeSvgNode(
@@ -75,7 +71,7 @@
                         y: 0.75 * boxHeight + 0.2 * letterFontSize,
                         class: 'letter',
                     },
-                    g,
+                    this.node,
                     votes[1]
                 );
             }
@@ -87,7 +83,7 @@
                         height: boxHeight,
                         class: votes[0],
                     },
-                    g
+                    this.node
                 );
                 makeSvgNode(
                     'text',
@@ -96,7 +92,7 @@
                         y: 0.5 * boxHeight + 0.3 * letterFontSize,
                         class: 'letter',
                     },
-                    g,
+                    this.node,
                     votes[0]
                 );
             }
@@ -107,10 +103,9 @@
                     height: boxHeight,
                     class: 'border',
                 },
-                g
+                this.node
             );
             this.votes = votes;
-            this.node = g;
             this.pos = pos;
             this.voteIndex = 0;
         }
@@ -146,6 +141,7 @@
             this.nameNode = this.makeNameNode();
             this.countNode = this.makeCountNode();
             this.eliminated = false;
+            this.maxBoxesPerRow = this.figure.maxBoxesPerRow;
         }
 
         addBox(box) {
@@ -153,7 +149,7 @@
             const pos = [that.nextBoxX(), that.nextBoxY()];
             const isNew = !(box instanceof VoteBox);
             if (isNew) { // argument is votes
-                box = new VoteBox(box, pos);
+                box = new VoteBox(box, pos, this.figure.node);
             }
             let promise = that.rowFull() ? that.expand(isNew ? 0 : 500) : Promise.resolve();
             that.incrementCount();
@@ -170,7 +166,7 @@
         }
 
         nextBoxX() {
-            return 7.3 * boxHeight + (this.count % maxBoxesPerRow) * (boxWidth + boxGap);
+            return 7.3 * boxHeight + (this.count % this.maxBoxesPerRow) * (boxWidth + boxGap);
         }
 
         nextBoxY() {
@@ -178,11 +174,11 @@
         }
 
         rowFull() {
-            return (this.count % maxBoxesPerRow) === 0 && this.count > 0;
+            return (this.count % this.maxBoxesPerRow) === 0 && this.count > 0;
         }
 
         boxRows() {
-            return Math.max(0, Math.floor((this.count - 1) / maxBoxesPerRow)) + 1;
+            return Math.max(0, Math.floor((this.count - 1) / this.maxBoxesPerRow)) + 1;
         }
 
         makeNode() {
@@ -191,7 +187,7 @@
             return makeSvgNode(
                 'g',
                 {transform: `translate(${x},${y})`},
-                svg
+                this.figure.node
             );
         }
 
@@ -248,7 +244,7 @@
         }
 
         expand(time = defaultMoveTime) {
-            return this.collection.expandCandidate(this, time);
+            return this.figure.expandCandidate(this, time);
         }
 
         eliminate() {
@@ -276,28 +272,56 @@
 
     }
 
-    class CandidateCollection {
+    class EndorsementFigure {
 
-        constructor(candidateAbbrs) {
+        constructor(candidateNames) {
             const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
-            const collection = this;
-            this.candidates = candidateAbbrs.map(function (abbr, i) {
-                return new Candidate({
-                    abbr,
-                    index: i,
-                    collection,
-                    color: abbr === 'N' ? '#888888' : colors[i],
-                    name: candidateNames[abbr],
-                    y: i * (boxHeight + candidateGap),
+            this.width = 1000;
+            this.maxBoxesPerRow = Math.floor((this.width - 7.3 * boxHeight) / (boxWidth - boxGap));
+            const figure = this;
+            this.node = this.makeNode();
+            this.candidates = Object.keys(candidateNames)
+                .map(function (abbr, i) {
+                    return new Candidate({
+                        abbr,
+                        index: i,
+                        figure,
+                        color: abbr === 'N' ? '#888888' : colors[i],
+                        name: candidateNames[abbr],
+                        y: i * (boxHeight + candidateGap),
+                    });
                 });
-            });
+            this.addStyle();
             this.count = this.candidates.length;
             this.height = this.count * (boxHeight + candidateGap) - candidateGap;
             this.adjustSvgHeight();
         }
 
+        makeNode() {
+            const containerNode = document.getElementById(containerId);
+            while (containerNode.firstChild) {
+                containerNode.removeChild(containerNode.firstChild);
+            }
+            return makeSvgNode(
+                'svg',
+                {viewBox: `0,0 ${this.width},${0.3 * this.width}`, width: '100%'},
+                containerNode
+            );
+        }
+
+        addStyle() {
+            let styleContent = '';
+            this.allCandidates().forEach(c => styleContent += `.${c.abbr} { fill: ${c.color} }\n`);
+            styleContent += `.letter { font-size: ${letterFontSize}px; fill: black; text-anchor: middle }\n` +
+                `.name { font-size: ${nameFontSize}px; fill: black; text-anchor: end }\n` +
+                `.count { font-size: ${nameFontSize}px; fill: blue; text-anchor: end }\n` +
+                `.border { stroke-width: ${boxHeight / 25}px; stroke: #bbbbbb; fill: transparent; }\n`;
+            const styleNode = makeSvgNode('style', {}, this.node);
+            styleNode.innerHTML = styleContent;
+        }
+
         remainingCandidates() {
-            return this.all().filter(c => c.abbr !== 'N' && !c.eliminated);
+            return this.allCandidates().filter(c => c.abbr !== 'N' && !c.eliminated);
         }
 
         sortedRemainingCandidates() {
@@ -311,7 +335,7 @@
         }
 
         candidateY(i) {
-            return this.get(i).index * (boxHeight + candidateGap);
+            return this.getCandidate(i).index * (boxHeight + candidateGap);
         }
 
         bottomCandidate() {
@@ -319,11 +343,11 @@
             return sorted[sorted.length - 1];
         }
 
-        all() {
+        allCandidates() {
             return Object.values(this.candidates);
         }
 
-        get(abbr) {
+        getCandidate(abbr) {
             return this.candidates.find(c => c.abbr === abbr || c.index === abbr);
         }
 
@@ -332,7 +356,7 @@
             this.height += distance;
             const promises = [];
             for (let i = candidate.index + 1; i < this.count; i++) {
-                promises.push(this.get(i).moveDown(distance, time));
+                promises.push(this.getCandidate(i).moveDown(distance, time));
             }
             return Promise.all(promises)
                 .then(() => this.adjustSvgHeight());
@@ -346,7 +370,7 @@
                 .then(function () {
                     const promises = [];
                     for (let i = candidate.index; i < that.count; i++) {
-                        promises.push(that.get(i).moveUp(distance, time));
+                        promises.push(that.getCandidate(i).moveUp(distance, time));
                     }
                     return Promise.all(promises);
                 })
@@ -354,34 +378,27 @@
         }
 
         adjustSvgHeight() {
-            svg.setAttribute(
+            this.node.setAttribute(
                 'viewBox',
-                svg.getAttribute('viewBox').replace(/[\d.]+$/, this.height + 1)
+                this.node.getAttribute('viewBox').replace(/[\d.]+$/, this.height + 1)
             );
         }
 
     }
 
-    const candidateCollection = new CandidateCollection(Object.keys(candidateNames));
-    insertStyle();
-    Promise.all(
-        voteList.map(votes => candidateCollection.get(votes[0]).addBox(votes))
-    ).then(function () {
-        const result = writeExplanation();
-        if (result === true) {
-            document.getElementById('play-button').addEventListener('click', () => doRounds(false));
-            document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
-        }
-        else {
-            document.getElementById('play-button').disabled = true;
-            document.getElementById('forward-button').disabled = true;
-        }
-    });
+    start(candidateNames, voteList);
+
+    function start(candidateNames, voteList) {
+        figure = new EndorsementFigure(candidateNames);
+        Promise.all(
+            voteList.map(votes => figure.getCandidate(votes[0]).addBox(votes))
+        ).then(writeExplanation);
+    }
 
     function doRounds(keepGoing) {
         document.getElementById('play-button').disabled = true;
         document.getElementById('forward-button').disabled = true;
-        const bottomCandidate = candidateCollection.bottomCandidate();
+        const bottomCandidate = figure.bottomCandidate();
         document.getElementById('explanation1').innerHTML =
             `${bottomCandidate.name} is eliminated, and each of those ${bottomCandidate.count}
             votes is transferred to the second-choice candidate for that ballot. If there is no second choice, or
@@ -401,9 +418,9 @@
             return function () {
                 const promises = boxGroup.map(function (box) {
                     bottomCandidate.removeBox(box);
-                    let toCandidate = candidateCollection.get(box.useNextChoice() || 'N');
+                    let toCandidate = figure.getCandidate(box.useNextChoice() || 'N');
                     if (toCandidate.eliminated) {
-                        toCandidate = candidateCollection.get('N');
+                        toCandidate = figure.getCandidate('N');
                     }
                     return toCandidate.addBox(box);
                 });
@@ -414,7 +431,7 @@
             (promiseChain, currentTask) => promiseChain.then(currentTask),
             Promise.resolve()
         )
-            .then(() => candidateCollection.eliminateCandidate(bottomCandidate))
+            .then(() => figure.eliminateCandidate(bottomCandidate))
             .then(function () {
                 const result = writeExplanation();
                 if (result !== true) {
@@ -432,7 +449,7 @@
     }
 
     function writeExplanation() {
-        const sortedCandidates = candidateCollection.sortedRemainingCandidates();
+        const sortedCandidates = figure.sortedRemainingCandidates();
         const topCandidate = sortedCandidates[0];
         const winner = topCandidate.count >= endorsementThreshold ? topCandidate : null;
         const explanation2 = document.getElementById('explanation2');
@@ -445,23 +462,15 @@
             explanation2.innerHTML += winner
                 ? `<strong>${topCandidate.name} is endorsed.</strong>`
                 : 'No candidates are left to be eliminated. <strong>There is no endorsement.</strong>';
+            document.getElementById('play-button').disabled = true;
+            document.getElementById('forward-button').disabled = true;
             return winner;
         }
-        const candidatesEliminated = candidateCollection.count - 1 - sortedCandidates.length;
+        const candidatesEliminated = figure.count - 1 - sortedCandidates.length;
         explanation2.innerHTML += candidatesEliminated
             ? 'The process continues.'
             : 'Second votes must be examined. Click a button to do one step or the entire process.';
         return true;
-    }
-
-    function insertStyle() {
-        let styleContent = '';
-        candidateCollection.all().forEach(c => styleContent += `.${c.abbr} { fill: ${c.color} }\n`);
-        styleContent += `.letter { font-size: ${letterFontSize}px; fill: black; text-anchor: middle }\n` +
-            `.name { font-size: ${nameFontSize}px; fill: black; text-anchor: end }\n` +
-            `.count { font-size: ${nameFontSize}px; fill: blue; text-anchor: end }\n` +
-            `.border { stroke-width: ${boxHeight / 25}px; stroke: #bbbbbb; fill: transparent; }\n`;
-        styleNode.innerHTML = styleContent;
     }
 
     function makeSvgNode(name, attr, parent, child) {
