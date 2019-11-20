@@ -21,6 +21,7 @@
     document.getElementById('play-button').addEventListener('click', () => doRounds(false));
     document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
     document.getElementById('reset-button').addEventListener('click', () => start(candidateNames, voteList));
+    setExplanationHeight();
 
     class VoteBox {
 
@@ -261,7 +262,7 @@
                     const opacity = 1 - frac;
                     setTimeout(
                         function () {
-                            node.setAttribute('style', `opacity: ${opacity}`);
+                            node.style.opacity = opacity;
                             if (frac >= 1) {
                                 node.remove();
                                 resolve();
@@ -425,16 +426,24 @@
         figure = new EndorsementFigure(candidateNames, voteList);
     }
 
+    function setExplanationHeight() {
+        const explanationNode = document.getElementById('explanation');
+        explanationNode.innerHTML = // set dummy text
+            `<span style="color: transparent">Xxxxxxxxxxxxx is eliminated, and each of those 99
+            votes is transferred to the second-choice candidate for that ballot. If there is no second choice, or
+            if the second choice has already been eliminated, the vote is transferred to "No endorsement".</span>`;
+        explanationNode.style.height = explanationNode.clientHeight + 'px';
+    }
+
     function doRounds(keepGoing) {
         document.getElementById('play-button').disabled = true;
         document.getElementById('forward-button').disabled = true;
         document.getElementById('reset-button').disabled = true;
         const bottomCandidate = figure.bottomCandidate();
-        document.getElementById('explanation1').innerHTML =
+        document.getElementById('explanation').innerHTML =
             `${bottomCandidate.name} is eliminated, and each of those ${bottomCandidate.count}
             votes is transferred to the second-choice candidate for that ballot. If there is no second choice, or
             if the second choice has already been eliminated, the vote is transferred to "No endorsement".`;
-        document.getElementById('explanation2').innerHTML = '';
         const boxRows = bottomCandidate.boxRows(); // save to use later, after boxes have been removed
         const boxesToMove = [...bottomCandidate.boxes].reverse();
         const boxGroups = [];
@@ -485,14 +494,14 @@
         const sortedCandidates = figure.sortedRemainingCandidates();
         const topCandidate = sortedCandidates[0];
         const winner = topCandidate.count >= figure.endorsementThreshold ? topCandidate : null;
-        const explanation2 = document.getElementById('explanation2');
+        const explanationNode = document.getElementById('explanation');
         const percent = (100 * topCandidate.count / figure.ballotCount).toFixed(2);
-        explanation2.innerHTML =
+        explanationNode.innerHTML =
             `${topCandidate.name} has ${topCandidate.count} votes, or ${percent}%, ` +
             (winner ? 'and has reached' : 'short of') +
             ` the two thirds (${Math.ceil(figure.endorsementThreshold)} votes) needed for endorsement. `;
         if (winner || sortedCandidates.length < 2) {
-            explanation2.innerHTML += winner
+            explanationNode.innerHTML += winner
                 ? `<strong>${topCandidate.name} is endorsed.</strong>`
                 : 'No candidates are left to be eliminated. <strong>There is no endorsement.</strong>';
             document.getElementById('play-button').disabled = true;
@@ -500,7 +509,7 @@
             return winner;
         }
         const candidatesEliminated = figure.candidateCount - 1 - sortedCandidates.length;
-        explanation2.innerHTML += candidatesEliminated
+        explanationNode.innerHTML += candidatesEliminated
             ? 'The process continues.'
             : 'Second votes must be examined. Click a button to do one step or the entire process.';
         return true;
