@@ -10,10 +10,17 @@
   <style type="text/css">
     #top-text {
       max-width: 40rem;
+      margin-bottom: 0.5rem;
     }
-    #buttons {
-      margin-right: 1rem;
-      margin-bottom: 0.3rem;
+    #top-text .form-group.row {
+      margin: 0.5rem 0.5rem 0 0;
+    }
+    #top-text label {
+      text-align: right;
+      padding-right: 0;
+    }
+    #controls {
+      margin-bottom: 0.5rem;
     }
     .byline {
       margin-bottom: 1rem;
@@ -58,23 +65,34 @@
         <p>
           The animation below explains how the process worked in this case.
           Each box represents a ballot and contains one or two choices indicated by color and initial.
-          The three buttons can be used to advance one step, to run through the entire process, or to reset the
+          You can use the three buttons to advance one step, to run through the entire process, or to reset the
           process to the beginning.
+          You can control the speed with the slider.
         </p>
       </div>
     </div>
     <div id="animation" class="col-12">
-      <div id="top-text" class="clearfix">
-        <div id="buttons" class="float-left">
-          <button id="play-button" class="btn btn-primary">
-            <i class="fas fa-play" title="Do one step"></i>
-          </button>
-          <button id="forward-button" class="btn btn-primary">
-            <i class="fas fa-forward" title="Do all steps"></i>
-          </button>
-          <button id="reset-button" class="btn btn-primary">
-            <i class="fas fa-backward" title="Reset"></i>
-          </button>
+      <div id="top-text">
+        <div id="controls" class="clearfix">
+          <div id="buttons" class="float-left">
+            <button id="play-button" class="btn btn-primary">
+              <i class="fas fa-play" title="Do one step"></i>
+            </button>
+            <button id="forward-button" class="btn btn-primary">
+              <i class="fas fa-forward" title="Do all steps"></i>
+            </button>
+            <button id="reset-button" class="btn btn-primary">
+              <i class="fas fa-backward" title="Reset"></i>
+            </button>
+          </div>
+          <form class="float-right">
+            <div class="form-group row">
+              <label for="speed-control" class="col-md-4 col-12">Speed</label>
+              <div class="col-md-8 col-12">
+                <input type="range" id="speed-control" class="form-control-range">
+              </div>
+            </div>
+          </form>
         </div>
         <p id="explanation"></p>
       </div>

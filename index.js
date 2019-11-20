@@ -16,11 +16,21 @@
         Z: 'Zhang',
         N: 'No endorsement',
     };
-    const defaultMoveTime = 500;
+    let moveTime = 500;
     let figure;
     document.getElementById('play-button').addEventListener('click', () => doRounds(false));
     document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
     document.getElementById('reset-button').addEventListener('click', () => start(candidateNames, voteList));
+    const speedControl = document.getElementById('speed-control');
+    speedControl.addEventListener(
+        'change',
+        function () {
+            moveTime = this.value;
+        }
+    );
+    speedControl.setAttribute('min', 0);
+    speedControl.setAttribute('max', 2000);
+    speedControl.value = moveTime.toString();
     setExplanationHeight();
 
     class VoteBox {
@@ -126,7 +136,7 @@
             return this.votes[1];
         }
 
-        moveTo(to, time = defaultMoveTime) {
+        moveTo(to, time = moveTime) {
             const from = this.pos;
             this.pos = to;
             return moveNode(this.node, from, to, time);
@@ -237,7 +247,7 @@
             this.countNode.innerHTML = this.count;
         }
 
-        moveDown(amount, time = defaultMoveTime) {
+        moveDown(amount, time = moveTime) {
             const fromY = this.y;
             this.y += amount;
             return Promise.all([
@@ -246,17 +256,17 @@
             ]);
         }
 
-        moveUp(amount, time = defaultMoveTime) {
+        moveUp(amount, time = moveTime) {
             return this.moveDown(-amount, time);
         }
 
-        expand(time = defaultMoveTime) {
+        expand(time = moveTime) {
             return this.figure.expandCandidate(this, time);
         }
 
         eliminate() {
             this.eliminated = true;
-            const time = defaultMoveTime;
+            const time = moveTime;
             const steps = Math.max(1, Math.round(time / 40));
             const node = this.node;
             return new Promise(function (resolve) {
@@ -407,7 +417,7 @@
             return this.candidates.find(c => c.abbr === abbr || c.index === abbr);
         }
 
-        expandCandidate(candidate, time = defaultMoveTime) {
+        expandCandidate(candidate, time = moveTime) {
             const distance = this.dimensions.boxHeight + this.dimensions.boxGap;
             this.height += distance;
             const promises = [];
@@ -418,7 +428,7 @@
                 .then(() => this.adjustSvgHeight());
         }
 
-        eliminateCandidate(candidate, boxRows = 1, time = defaultMoveTime) {
+        eliminateCandidate(candidate, boxRows = 1, time = moveTime) {
             const distance = boxRows * (this.dimensions.boxHeight + this.dimensions.boxGap) -
                 this.dimensions.boxGap + this.dimensions.candidateGap;
             this.height -= distance;
@@ -463,7 +473,7 @@
             `<span style="color: transparent">Xxxxxxxxxxxxx is eliminated, and each of those 99
             votes is transferred to the second-choice candidate for that ballot (if not already eliminated
             or to "No endorsement".</span>`;
-        explanationNode.style.height = explanationNode.clientHeight + 'px';
+        explanationNode.style.height = (explanationNode.clientHeight + 16) + 'px';
     }
 
     function doRounds(keepGoing) {
@@ -512,7 +522,7 @@
                 }
                 if (keepGoing) {
                     return new Promise(function (resolve) {
-                        setTimeout(() => resolve(doRounds(true)), 3 * defaultMoveTime);
+                        setTimeout(() => resolve(doRounds(true)), 3 * moveTime);
                     });
                 }
                 document.getElementById('play-button').disabled = false;
@@ -563,7 +573,7 @@
         return node;
     }
 
-    function moveNode(node, from, to, time = defaultMoveTime) {
+    function moveNode(node, from, to, time = moveTime) {
         const steps = Math.max(1, Math.round(time / 40));
         return new Promise(function (resolve) {
             for (let i = 0; i < steps; i++) {
