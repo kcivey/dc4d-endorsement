@@ -308,7 +308,7 @@
 
         setDimensions() {
             this.width = 1000;
-            const pixelsPerUnit = window.innerWidth / this.width;
+            const pixelsPerUnit = document.getElementById(containerId).clientWidth / this.width;
             const boxHeightPixels = Math.max(16 * pixelsPerUnit, 25);
             const boxHeight = boxHeightPixels / pixelsPerUnit;
             const boxWidth = boxHeight;
@@ -438,8 +438,8 @@
         const explanationNode = document.getElementById('explanation');
         explanationNode.innerHTML = // set dummy text
             `<span style="color: transparent">Xxxxxxxxxxxxx is eliminated, and each of those 99
-            votes is transferred to the second-choice candidate for that ballot. If there is no second choice, or
-            if the second choice has already been eliminated, the vote is transferred to "No endorsement".</span>`;
+            votes is transferred to the second-choice candidate for that ballot (if not already eliminated
+            or to "No endorsement".</span>`;
         explanationNode.style.height = explanationNode.clientHeight + 'px';
     }
 
@@ -450,8 +450,8 @@
         const bottomCandidate = figure.bottomCandidate();
         document.getElementById('explanation').innerHTML =
             `${bottomCandidate.name} is eliminated, and each of those ${bottomCandidate.count}
-            votes is transferred to the second-choice candidate for that ballot. If there is no second choice, or
-            if the second choice has already been eliminated, the vote is transferred to "No endorsement".`;
+            votes is transferred to the second-choice candidate for that ballot (if not already eliminated)
+            or to "No endorsement".`;
         const boxRows = bottomCandidate.boxRows(); // save to use later, after boxes have been removed
         const boxesToMove = [...bottomCandidate.boxes].reverse();
         const boxGroups = [];
