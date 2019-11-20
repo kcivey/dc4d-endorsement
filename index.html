@@ -10,13 +10,19 @@
   <style type="text/css">
     #top-text {
       max-width: 40rem;
-      margin-bottom: 0.5rem;
+      padding-bottom: 1rem;
+      margin-bottom: 0
     }
     #top-text .form-group.row {
       margin: 0.5rem 0.5rem 0 0;
     }
     #top-text label {
       text-align: right;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    #top-text .col-9 {
+      padding-left: 10px;
       padding-right: 0;
     }
     #controls {
@@ -74,7 +80,7 @@
     <div class="col-12">
       <div id="animation">
         <div id="top-text">
-          <div id="controls" class="clearfix">
+          <div id="controls" class="clearfix text">
             <div id="buttons" class="float-left">
               <button id="play-button" class="btn btn-primary">
                 <i class="fas fa-play" title="Do one step"></i>
@@ -88,8 +94,8 @@
             </div>
             <form class="float-right">
               <div class="form-group row">
-                <label for="speed-control" class="col-4">Speed</label>
-                <div class="col-8">
+                <label for="speed-control" class="col-3">Speed</label>
+                <div class="col-9">
                   <input type="range" id="speed-control" class="form-control-range">
                 </div>
               </div>

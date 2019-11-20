@@ -328,7 +328,7 @@
             const boxGap = 0.1 * boxWidth;
             const candidateGap = 0.8 * boxHeight;
             this.height = this.candidateCount * (boxHeight + candidateGap) - candidateGap;
-            const nameFontSize = 0.65 * boxHeight;
+            const nameFontSize = 0.6 * boxHeight;
             const nameWidth = getTextLength('No endorsement', this);
             const countWidth = getTextLength('99', this);
             const columnGap = boxWidth / 2;
@@ -363,8 +363,8 @@
         makeNode() {
             if (window.innerWidth <= 576) {
                 const animationNode = document.getElementById('animation');
-                animationNode.style.marginLeft = '-30px';
-                animationNode.style.marginRight = '-30px';
+                animationNode.style.marginLeft = '-12px';
+                animationNode.style.marginRight = '-12px';
             }
             const containerNode = document.getElementById(containerId);
             let svg = containerNode.firstChild;
@@ -473,6 +473,9 @@
     }
 
     function setExplanationHeight() {
+        if (window.innerWidth <= 576) {
+            document.getElementById('top-text').style.paddingBottom = '0';
+        }
         const explanationNode = document.getElementById('explanation');
         explanationNode.innerHTML = // set dummy text
             `<span style="color: transparent">Xxxxxxxxxxxxx has 99 votes, short of the two thirds (99 votes)
