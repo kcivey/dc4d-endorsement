@@ -168,8 +168,10 @@
         }
 
         nextBoxX() {
-            return 7.3 * this.figure.dimensions.boxHeight + (this.count % this.maxBoxesPerRow) *
-                (this.figure.dimensions.boxWidth + this.figure.dimensions.boxGap);
+            return 3 + this.figure.dimensions.nameWidth + 2 * this.figure.dimensions.columnGap +
+                this.figure.dimensions.countWidth +
+                (this.count % this.maxBoxesPerRow) *
+                (3 + this.figure.dimensions.boxHeight + this.figure.dimensions.boxGap);
         }
 
         nextBoxY() {
@@ -199,7 +201,7 @@
             return makeSvgNode(
                 'text',
                 {
-                    x: 5.5 * this.figure.dimensions.boxHeight, // approx length of "No endorsement" plus padding
+                    x: 3 + this.figure.dimensions.nameWidth,
                     y: 1.1 * this.figure.dimensions.nameFontSize,
                     class: 'name',
                 },
@@ -212,7 +214,8 @@
             return makeSvgNode(
                 'text',
                 {
-                    x: 6.8 * this.figure.dimensions.boxHeight,
+                    x: 3 + this.figure.dimensions.nameWidth + this.figure.dimensions.columnGap +
+                        this.figure.dimensions.countWidth,
                     y: 1.1 * this.figure.dimensions.nameFontSize,
                     class: 'count',
                 },
@@ -282,9 +285,10 @@
             const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
             const candidateAbbrs = Object.keys(candidateNames);
             this.candidateCount = candidateAbbrs.length;
+            this.width = 1000; // SVG units
+            this.node = this.makeNode();
             this.setDimensions();
             const {boxHeight, candidateGap} = this.dimensions;
-            this.node = this.makeNode();
             const figure = this;
             this.candidates = candidateAbbrs
                 .map(function (abbr, i) {
@@ -307,24 +311,43 @@
         }
 
         setDimensions() {
-            this.width = 1000;
-            const pixelsPerUnit = document.getElementById(containerId).clientWidth / this.width;
+            const pixelsPerUnit = this.node.clientWidth / this.width;
             const boxHeightPixels = Math.max(16 * pixelsPerUnit, 25);
             const boxHeight = boxHeightPixels / pixelsPerUnit;
             const boxWidth = boxHeight;
             const boxGap = 0.1 * boxWidth;
             const candidateGap = boxHeight;
             this.height = this.candidateCount * (boxHeight + candidateGap) - candidateGap;
+            const nameFontSize = 0.75 * boxHeight;
+            const nameWidth = getTextLength('No endorsement', this);
+            const countWidth = getTextLength('99', this);
+            const columnGap = boxWidth / 2;
             this.dimensions = {
                 boxWidth,
                 boxHeight,
                 boxGap,
                 candidateGap,
-                nameFontSize: 0.75 * boxHeight,
+                nameFontSize,
                 letterFontSize: 0.45 * boxHeight,
                 strokeWidth: boxHeight / 25,
+                nameWidth,
+                countWidth,
+                columnGap,
             };
-            this.maxBoxesPerRow = Math.floor((this.width - 7.3 * boxHeight) / (boxWidth + boxGap));
+            this.maxBoxesPerRow =
+                Math.floor((this.width - (nameWidth + countWidth + 2 * columnGap)) / (boxWidth + boxGap));
+
+            function getTextLength(text, that) {
+                const dummyNode = makeSvgNode(
+                    'text',
+                    {x: -100, y: 0, class: 'name', 'font-size': nameFontSize + 'px'},
+                    that.node,
+                    text
+                );
+                const width = dummyNode.getComputedTextLength();
+                that.node.removeChild(dummyNode);
+                return width;
+            }
         }
 
         makeNode() {
