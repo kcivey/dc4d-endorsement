@@ -475,9 +475,9 @@
     function setExplanationHeight() {
         const explanationNode = document.getElementById('explanation');
         explanationNode.innerHTML = // set dummy text
-            `<span style="color: transparent">Xxxxxxxxxxxxx is eliminated, and each of those 99
-            votes is transferred to the second-choice candidate for that ballot (if not already eliminated
-            or to "No endorsement".</span>`;
+            `<span style="color: transparent">Xxxxxxxxxxxxx has 99 votes, short of the two thirds (99 votes)
+            needed for endorsement. Second choices must be examined. Click a button to do one step or the
+            entire process.</span>`;
         explanationNode.style.height = (explanationNode.clientHeight + 16) + 'px';
     }
 
@@ -557,7 +557,7 @@
         const candidatesEliminated = figure.candidateCount - 1 - sortedCandidates.length;
         explanationNode.innerHTML += candidatesEliminated
             ? 'The process continues.'
-            : 'Second votes must be examined. Click a button to do one step or the entire process.';
+            : 'Second choices must be examined. Click a button to do one step or the entire process.';
         return true;
     }
 
