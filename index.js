@@ -428,6 +428,8 @@
     start(candidateNames, voteList);
 
     function start(candidateNames, voteList) {
+        document.getElementById('play-button').disabled = false;
+        document.getElementById('forward-button').disabled = false;
         document.getElementById('reset-button').disabled = true;
         figure = new EndorsementFigure(candidateNames, voteList);
     }
@@ -487,7 +489,7 @@
                 }
                 if (keepGoing) {
                     return new Promise(function (resolve) {
-                        setTimeout(() => resolve(doRounds(true)), defaultMoveTime);
+                        setTimeout(() => resolve(doRounds(true)), 3 * defaultMoveTime);
                     });
                 }
                 document.getElementById('play-button').disabled = false;
