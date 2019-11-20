@@ -329,14 +329,20 @@
 
         makeNode() {
             const containerNode = document.getElementById(containerId);
-            while (containerNode.firstChild) {
-                containerNode.removeChild(containerNode.firstChild);
+            let svg = containerNode.firstChild;
+            if (svg) {
+                while (svg.firstChild) {
+                    svg.removeChild(svg.firstChild);
+                }
             }
-            return makeSvgNode(
-                'svg',
-                {viewBox: `0,0 ${this.width},${0.3 * this.width}`, width: '100%'},
-                containerNode
-            );
+            else {
+                svg = makeSvgNode(
+                    'svg',
+                    {viewBox: `0,0 ${this.width},${0.3 * this.width}`, width: '100%'},
+                    containerNode
+                );
+            }
+            return svg;
         }
 
         addStyle() {
