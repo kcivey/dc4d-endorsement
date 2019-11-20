@@ -1,3 +1,10 @@
+/**
+ * Copyright 2019 Keith C. Ivey
+ * keith@iveys.org
+ * https://dcgeekery.com
+ * ISC License
+ * Source: https://github/kcivey/dc4d-endorsement
+ */
 (function () {
     const containerId = 'figure-container';
     const voteList = ('PK FK KZ KF K KF K K K K K K K K K K G GK GK GP G GZ G GZ GZ G GK GZ G G G G G G G G G ' +
