@@ -39,7 +39,7 @@
       background-color: white;
       border: #ccc 1px solid;
       padding: 0.5rem;
-      margin: 1rem;
+      margin-top: 0.5rem;
     }
   </style>
 </head>
@@ -71,32 +71,34 @@
         </p>
       </div>
     </div>
-    <div id="animation" class="col-12">
-      <div id="top-text">
-        <div id="controls" class="clearfix">
-          <div id="buttons" class="float-left">
-            <button id="play-button" class="btn btn-primary">
-              <i class="fas fa-play" title="Do one step"></i>
-            </button>
-            <button id="forward-button" class="btn btn-primary">
-              <i class="fas fa-forward" title="Do all steps"></i>
-            </button>
-            <button id="reset-button" class="btn btn-primary">
-              <i class="fas fa-backward" title="Reset"></i>
-            </button>
-          </div>
-          <form class="float-right">
-            <div class="form-group row">
-              <label for="speed-control" class="col-md-4 col-12">Speed</label>
-              <div class="col-md-8 col-12">
-                <input type="range" id="speed-control" class="form-control-range">
-              </div>
+    <div class="col-12">
+      <div id="animation">
+        <div id="top-text">
+          <div id="controls" class="clearfix">
+            <div id="buttons" class="float-left">
+              <button id="play-button" class="btn btn-primary">
+                <i class="fas fa-play" title="Do one step"></i>
+              </button>
+              <button id="forward-button" class="btn btn-primary">
+                <i class="fas fa-forward" title="Do all steps"></i>
+              </button>
+              <button id="reset-button" class="btn btn-primary">
+                <i class="fas fa-backward" title="Reset"></i>
+              </button>
             </div>
-          </form>
+            <form class="float-right">
+              <div class="form-group row">
+                <label for="speed-control" class="col-4">Speed</label>
+                <div class="col-8">
+                  <input type="range" id="speed-control" class="form-control-range">
+                </div>
+              </div>
+            </form>
+          </div>
+          <p id="explanation"></p>
         </div>
-        <p id="explanation"></p>
+        <div id="figure-container"></div>
       </div>
-      <div id="figure-container"></div>
     </div>
   </div>
 </div>
