@@ -476,6 +476,7 @@
             .then(function () {
                 const result = writeExplanation();
                 if (result !== true) {
+                    document.getElementById('reset-button').disabled = false;
                     return result;
                 }
                 if (keepGoing) {
@@ -505,7 +506,6 @@
                 ? `<strong>${topCandidate.name} is endorsed.</strong>`
                 : 'No candidates are left to be eliminated. <strong>There is no endorsement.</strong>';
             document.getElementById('play-button').disabled = true;
-            document.getElementById('reset-button').disabled = true;
             return winner;
         }
         const candidatesEliminated = figure.candidateCount - 1 - sortedCandidates.length;
