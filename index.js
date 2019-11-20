@@ -574,7 +574,7 @@
     }
 
     function moveNode(node, from, to, time = moveTime) {
-        const steps = Math.max(1, Math.round(time / 40));
+        const steps = Math.max(1, Math.round(time / 20));
         return new Promise(function (resolve) {
             for (let i = 0; i < steps; i++) {
                 const frac = easing((i + 1) / steps);
