@@ -368,11 +368,6 @@
         }
 
         makeNode() {
-            if (window.innerWidth <= 576) {
-                const animationNode = document.getElementById('animation');
-                animationNode.style.marginLeft = '-12px';
-                animationNode.style.marginRight = '-12px';
-            }
             const containerNode = document.getElementById(containerId);
             let svg = containerNode.firstChild;
             if (svg) {
