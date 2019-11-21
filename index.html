@@ -53,6 +53,9 @@
         margin-right: -12px;
       }
     }
+    #speed-control {
+      direction: rtl;
+    }
   </style>
 </head>
 <body>
@@ -102,7 +105,7 @@
               <div class="form-group row">
                 <label for="speed-control" class="col-3">Speed</label>
                 <div class="col-9">
-                  <input type="range" id="speed-control" class="form-control-range">
+                  <input type="range" id="speed-control" class="form-control-range" step="any" min="0">
                 </div>
               </div>
             </form>

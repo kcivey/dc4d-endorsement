@@ -25,20 +25,8 @@
     };
     let moveTime = 500;
     let figure;
-    document.getElementById('play-button').addEventListener('click', () => doRounds(false));
-    document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
-    document.getElementById('reset-button').addEventListener('click', () => start(candidateNames, voteList));
-    const speedControl = document.getElementById('speed-control');
-    speedControl.addEventListener(
-        'change',
-        function () {
-            moveTime = this.value;
-        }
-    );
-    speedControl.setAttribute('min', 0);
-    speedControl.setAttribute('max', 2000);
-    speedControl.value = moveTime.toString();
     setExplanationHeight();
+    setUpHandlers();
 
     class VoteBox {
 
@@ -472,6 +460,22 @@
         document.getElementById('forward-button').disabled = false;
         document.getElementById('reset-button').disabled = true;
         figure = new EndorsementFigure(candidateNames, voteList);
+    }
+
+    function setUpHandlers() {
+        document.getElementById('play-button').addEventListener('click', () => doRounds(false));
+        document.getElementById('forward-button').addEventListener('click', () => doRounds(true));
+        document.getElementById('reset-button').addEventListener('click', () => start(candidateNames, voteList));
+        const speedControl = document.getElementById('speed-control');
+        speedControl.addEventListener('change', setMoveTime);
+        speedControl.addEventListener('input', setMoveTime);
+        speedControl.setAttribute('max', Math.round((moveTime * 4) ** 0.5).toString());
+        speedControl.value = (moveTime ** 0.5).toString();
+
+        function setMoveTime() {
+            moveTime = Math.round(this.value ** 2);
+            console.log(moveTime);
+        }
     }
 
     function setExplanationHeight() {
