@@ -1,11 +1,20 @@
 #!/usr/bin/env node
 'use strict';
 
+const findConfig = require('find-config');
+const dotEnvResult = require('dotenv').config({path: findConfig('.env')});
 const assert = require('assert');
 const fs = require('fs');
 const util = require('util');
 const csvParse = util.promisify(require('csv-parse'));
+const {google} = require('googleapis');
 const inputFile = process.argv[2] || 'vote_by_vote.csv';
+const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+const googleAccountKey = require(findConfig(process.env.GOOGLE_ACCOUNT_KEY_FILE));
+
+if (dotEnvResult.error) {
+    throw dotEnvResult.error;
+}
 
 main()
     .catch(function (err) {
@@ -18,6 +27,13 @@ async function main() {
         .replace(/^\uFEFF/, '') // remove BOM
         .trim()
         .split(/\n\n+/);
+    const auth = new google.auth.JWT(
+        googleAccountKey.client_email,
+        null,
+        googleAccountKey.private_key,
+        ['https://www.googleapis.com/auth/spreadsheets']
+    );
+    const sheets = google.sheets({version: 'v4', auth});
     const votes = {};
     let ranked = false;
     let office = '';
@@ -39,9 +55,21 @@ async function main() {
             votes[office] = convertedData;
             ranked = false;
             office = '';
+            const spreadsheetData = [Object.keys(convertedData[0]), ...convertedData.map(Object.values)];
+            const result = await sheets.spreadsheets.values.append({
+                spreadsheetId,
+                range: 'Sheet1',
+                valueInputOption: 'RAW',
+                insertDataOption: 'INSERT_ROWS',
+                resource: {
+                    values: spreadsheetData,
+                },
+                auth,
+            });
+            console.log(result);
+            process.exit()
         }
     }
-    console.log(votes)
 }
 
 function transformRow(row, ranked) {
