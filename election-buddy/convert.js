@@ -34,9 +34,19 @@ async function main() {
         ['https://www.googleapis.com/auth/spreadsheets']
     );
     const sheets = google.sheets({version: 'v4', auth});
+    const result = await sheets.spreadsheets.values.clear({
+        spreadsheetId,
+        range: "'EB Votes'",
+        auth,
+    });
+    if (result.statusText !== 'OK') {
+        console.warn(result);
+        throw new Error('Error in clearing sheet');
+    }
     const votes = {};
     let ranked = false;
     let office = '';
+    let rowNumber = 1;
     for (const chunk of chunks) {
         if (!office) {
             office = chunk;
@@ -52,22 +62,29 @@ async function main() {
             for (const row of csvData) {
                 convertedData.push(transformRow(row, ranked));
             }
+            convertedData.sort((a, b) => a.Voter.localeCompare(b.Voter));
             votes[office] = convertedData;
-            ranked = false;
-            office = '';
-            const spreadsheetData = [Object.keys(convertedData[0]), ...convertedData.map(Object.values)];
-            const result = await sheets.spreadsheets.values.append({
+            const spreadsheetData = [
+                [office],
+                Object.keys(convertedData[0]),
+                ...convertedData.map(Object.values),
+            ];
+            const result = await sheets.spreadsheets.values.update({
                 spreadsheetId,
-                range: 'Sheet1',
+                range: `'EB Votes'!A${rowNumber}`,
                 valueInputOption: 'RAW',
-                insertDataOption: 'INSERT_ROWS',
                 resource: {
                     values: spreadsheetData,
                 },
                 auth,
             });
-            console.log(result);
-            process.exit()
+            if (result.statusText !== 'OK') {
+                console.warn(result);
+                throw new Error('Error in updating sheet');
+            }
+            ranked = false;
+            office = '';
+            rowNumber += spreadsheetData.length + 1;
         }
     }
 }
