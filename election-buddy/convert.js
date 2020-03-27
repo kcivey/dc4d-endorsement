@@ -92,21 +92,31 @@ async function main() {
 function transformRow(row, ranked) {
     const candidates = Object.keys(row).length - 4;
     const newRow = {Voter: row.Voter};
+    let usedFirstChoice = false;
     for (const [name, value] of Object.entries(row)) {
         if (/Write-in|Voter|Ballot|Abstain/i.test(name)) {
             if (name !== 'Ballot') {
                 newRow[name] = ranked ? value.replace(/(?<=\()(\d+)(?=\))/, (m, m1) => candidates - m1 + 1) : value;
+                if (/Write-in/i.test(name) && /\(1\)$/.test(newRow[name])) {
+                    usedFirstChoice = true;
+                }
             }
             continue;
         }
         const m = name.match(/(No Endorsement)|(\S+?)(?:\s*\([^)]*\))?$/i);
         assert(m, `Unexpected column header format "${name}"`);
         const newName = m[1] || m[2];
-        let newValue = /^\d+$/.test(value) ? (ranked ? candidates - value + 1 : +value) : value;
-        if (newValue > 2) { // allow ranking only 2
-            newValue = '';
+        const newValue = /^\d+$/.test(value) ? (ranked ? candidates - value + 1 : +value) : value;
+        // if (newValue > 2) { // allow ranking only 2
+        //     newValue = '';
+        // }
+        if (newValue === 1) {
+            usedFirstChoice = true;
         }
         newRow[newName] = newValue;
+    }
+    if (!usedFirstChoice && ! row.Abstain) {
+        console.warn('No first choice', row, newRow);
     }
     return newRow;
 }
