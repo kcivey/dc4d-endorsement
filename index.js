@@ -7,14 +7,16 @@
  */
 (function () {
     const containerId = 'figure-container';
-    const voteList = ('PK FK KZ KF K KF K K K K K K K K K K G GK GK GP G GZ G GZ GZ G GK GZ G G G G G G G G G ' +
-        'G G G G GZ GZ GK GH G GZ G GK PG ZG ZG ZG KG KG KG GP G GK GP GF GK F F F F F F F F FZ ZF PF PF Z ZP ' +
-        'ZH PZ HZ HZ Z P HP N N S S A')
+    const voteList = ('KZ K KP G G K G G F KG GK GZ G KG K G G G K G G G GZ K G GB K HP KH K GZ K G ' +
+        'KF G KZ K G G G K K ZG ZH KZ G G GK GK K GP K GK G GZ F GP GZ KZ K GZ N GZ G GZ G K G F G G ' +
+        'G GF G GK G FG G G ZG GK F GZ GK GK G G G G G FP FP GK ZG G ZG GF KB ZH G G')
         .split(' ')
         .filter(t => t !== 'A' && t !== 'S')
         .sort((a, b) => (a.length - b.length) || (a > b ? 1 : a < b ? -1 : 0))
         .map(v => v.split(''));
     const candidateNames = {
+        B: 'Pinto',
+        E: 'Evans',
         F: 'Fanning',
         G: 'Grossman',
         H: 'Hernandez',
@@ -287,7 +289,7 @@
     class EndorsementFigure {
 
         constructor(candidateNames, voteList) {
-            const colors = ['#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
+            const colors = ['#b3de69', '#ffffff', '#fb8072', '#8dd3c7', '#ffffb3', '#80b1d3', '#bebada', '#fdb462'];
             const candidateAbbrs = Object.keys(candidateNames);
             this.candidateCount = candidateAbbrs.length;
             this.width = 1000; // SVG units
