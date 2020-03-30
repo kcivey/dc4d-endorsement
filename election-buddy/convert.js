@@ -115,7 +115,7 @@ function transformRow(row, ranked) {
         }
         newRow[newName] = newValue;
     }
-    if (!usedFirstChoice && ! row.Abstain) {
+    if (!usedFirstChoice && !row.Abstain) {
         console.warn('No first choice', row, newRow);
     }
     return newRow;
