@@ -176,7 +176,7 @@
             return 3 + this.figure.dimensions.nameWidth + 2 * this.figure.dimensions.columnGap +
                 this.figure.dimensions.countWidth +
                 (this.count % this.maxBoxesPerRow) *
-                (3 + this.figure.dimensions.boxHeight + this.figure.dimensions.boxGap);
+                (this.figure.dimensions.boxHeight + this.figure.dimensions.boxGap);
         }
 
         nextBoxY() {
@@ -318,9 +318,9 @@
         setDimensions() {
             const pixelsPerUnit = this.node.clientWidth / this.width;
             const boxHeightPixels = Math.max(16 * pixelsPerUnit, 25);
-            const boxHeight = boxHeightPixels / pixelsPerUnit;
+            const boxHeight = boxHeightPixels / pixelsPerUnit + 2;
             const boxWidth = boxHeight;
-            const boxGap = 0.1 * boxWidth;
+            const boxGap = boxWidth / 6;
             const candidateGap = 0.8 * boxHeight;
             this.height = this.candidateCount * (boxHeight + candidateGap) - candidateGap;
             const nameFontSize = 0.6 * boxHeight;
@@ -474,7 +474,6 @@
 
         function setMoveTime() {
             moveTime = Math.round(this.value ** 2);
-            console.log(moveTime);
         }
     }
 
