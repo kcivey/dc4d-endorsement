@@ -90,7 +90,7 @@ async function main() {
 }
 
 function transformRow(row, ranked) {
-    const candidates = Object.keys(row).length - 4;
+    const candidates = Object.keys(row).filter(name => !/Write-in|Voter|Ballot|Abstain/i.test(name)).length;
     const newRow = {Voter: row.Voter};
     let usedFirstChoice = false;
     for (const [name, value] of Object.entries(row)) {
@@ -106,10 +106,10 @@ function transformRow(row, ranked) {
         const m = name.match(/(No Endorsement)|(\S+?)(?:\s*\([^)]*\))?$/i);
         assert(m, `Unexpected column header format "${name}"`);
         const newName = m[1] || m[2];
-        const newValue = /^\d+$/.test(value) ? (ranked ? candidates - value + 1 : +value) : value;
-        // if (newValue > 2) { // allow ranking only 2
-        //     newValue = '';
-        // }
+        let newValue = /^\d+$/.test(value) ? (ranked ? candidates - value + 1 : +value) : value;
+        if (newValue > 2) { // allow ranking only 2
+            newValue = '';
+        }
         if (newValue === 1) {
             usedFirstChoice = true;
         }
