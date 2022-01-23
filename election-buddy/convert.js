@@ -97,15 +97,20 @@ function transformRow(row, ranked) {
         if (/Write-in|Voter|Ballot|Abstain/i.test(name)) {
             if (name !== 'Ballot') {
                 newRow[name] = ranked ? value.replace(/(?<=\()(\d+)(?=\))/, (m, m1) => candidates - m1 + 1) : value;
-                if (/Write-in/i.test(name) && /\(1\)$/.test(newRow[name])) {
-                    usedFirstChoice = true;
+                if (/Write-in/i.test(name)) {
+                    if (/\(1\)$/.test(newRow[name])) {
+                        usedFirstChoice = true;
+                    }
+                    else if (/\((?:[2-9]|\d\d+)\)$/.test(newRow[name])) {
+                        newRow[name] = '';
+                    }
                 }
             }
             continue;
         }
         const m = name.match(/(No Endorsement)|(\S+?)(?:\s*\([^)]*\))?$/i);
         assert(m, `Unexpected column header format "${name}"`);
-        const newName = m[1] || m[2];
+        const newName = m[2] === 'White' ? name.replace(/^(\w)\S+/, '$1') : m[1] || m[2];
         let newValue = /^\d+$/.test(value) ? (ranked ? candidates - value + 1 : +value) : value;
         if (newValue > 2) { // allow ranking only 2
             newValue = '';
