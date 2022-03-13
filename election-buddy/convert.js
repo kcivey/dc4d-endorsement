@@ -112,9 +112,11 @@ function transformRow(row, ranked) {
             }
             continue;
         }
-        const m = name.match(/(No Endorsement)|(\S+?)(?:\s*\([^)]*\))?$/i);
+        const m = name.match(/(No Endorsement)|(\S+?)(?: [JS]r\.)?(?:\s*\([^)]*\))?$/i);
         assert(m, `Unexpected column header format "${name}"`);
-        const newName = m[2] === 'White' ? name.replace(/^(\w)\S+/, '$1') : m[1] || m[2];
+        const newName = m[2] === 'Jenkins'
+            ? name.replace(/^(\w)\S+/, '$1')
+            : (m[1] ? 'No Endorsement' : m[2]);
         let newValue = /^\d+$/.test(value) ? (ranked ? candidates - value + 1 : +value) : value;
         if (newValue > 2) { // allow ranking only 2
             newValue = '';
@@ -126,6 +128,12 @@ function transformRow(row, ranked) {
     }
     if (!usedFirstChoice && !row.Abstain) {
         console.warn('No first choice', row, newRow);
+    }
+    for (const [name, value] of Object.entries(newRow)) {
+        if (value === 2 && (name === 'No Endorsement' || newRow['No Endorsement'] === 1)) {
+            // Omit second choice if it's No Endorsement or if first choice is No Endorsement
+            newRow[name] = '';
+        }
     }
     return newRow;
 }
