@@ -34,22 +34,26 @@ async function main() {
         ['https://www.googleapis.com/auth/spreadsheets']
     );
     const sheets = google.sheets({version: 'v4', auth});
-    const result = await sheets.spreadsheets.values.clear({
-        spreadsheetId,
-        range: "'EB Votes'",
-        auth,
-    });
-    if (result.statusText !== 'OK') {
-        console.warn(result);
-        throw new Error('Error in clearing sheet');
-    }
-    const votes = {};
+    let votes = {};
     let ranked = false;
     let office = '';
     let rowNumber = 1;
+    let sheetName = '';
     for (const chunk of chunks) {
         if (!office) {
-            office = chunk;
+            office = chunk.replace(' Fage ', ' Fair ');
+            votes = {};
+            rowNumber = 1;
+            sheetName = office.replace(/^Council | \(.*/, '');
+            const result = await sheets.spreadsheets.values.clear({
+                spreadsheetId,
+                range: `'${sheetName}'`,
+                auth,
+            });
+            if (result.statusText !== 'OK') {
+                console.warn(result);
+                throw new Error('Error in clearing sheet');
+            }
         }
         else if (/^The highest ranked candidate gets the highest score/.test(chunk)) {
             ranked = true;
@@ -71,7 +75,7 @@ async function main() {
             ];
             const result = await sheets.spreadsheets.values.update({
                 spreadsheetId,
-                range: `'EB Votes'!A${rowNumber}`,
+                range: `'${sheetName}'!A${rowNumber}`,
                 valueInputOption: 'RAW',
                 resource: {
                     values: spreadsheetData,
