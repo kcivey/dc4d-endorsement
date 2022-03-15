@@ -45,6 +45,7 @@ async function main() {
             votes = {};
             rowNumber = 1;
             sheetName = office.replace(/^Council | \(.*/, '');
+            /*
             const result = await sheets.spreadsheets.values.clear({
                 spreadsheetId,
                 range: `'${sheetName}'`,
@@ -54,6 +55,7 @@ async function main() {
                 console.warn(result);
                 throw new Error('Error in clearing sheet');
             }
+             */
         }
         else if (/^The highest ranked candidate gets the highest score/.test(chunk)) {
             ranked = true;
@@ -67,12 +69,44 @@ async function main() {
                 convertedData.push(transformRow(row, ranked));
             }
             convertedData.sort((a, b) => a.Voter.localeCompare(b.Voter));
+            const counts = {};
+            for (const row of convertedData) {
+                if (row.Abstain) {
+                    continue;
+                }
+                const first = Object.keys(row).find(n => row[n] === 1) || '';
+                const second = Object.keys(row).find(n => row[n] === 2) || '';
+                if (!counts[first]) {
+                    counts[first] = {TOTAL: 0};
+                }
+                counts[first].TOTAL++;
+                if (!counts[first][second]) {
+                    counts[first][second] = 1;
+                }
+                else {
+                    counts[first][second]++;
+                }
+            }
+            const firstChoices = Object.keys(counts)
+                .sort((a, b) => (counts[b].TOTAL - counts[a].TOTAL) || a.localeCompare(b));
+            for (const first of firstChoices) {
+                const secondChoices = Object.keys(counts[first]).filter(n => n !== 'TOTAL')
+                    .sort((a, b) => (counts[first][b] - counts[first][a]) || a.localeCompare(b));
+                let c1 = first;
+                let c2 = counts[first].TOTAL;
+                for (const second of secondChoices) {
+                    console.log(`${c1}\t${c2}\t${second || 'No endorsement'}\t${counts[first][second]}`);
+                    c1 = '';
+                    c2 = '';
+                }
+            }
             votes[office] = convertedData;
             const spreadsheetData = [
                 [office],
                 Object.keys(convertedData[0]),
                 ...convertedData.map(Object.values),
             ];
+            /*
             const result = await sheets.spreadsheets.values.update({
                 spreadsheetId,
                 range: `'${sheetName}'!A${rowNumber}`,
@@ -86,6 +120,7 @@ async function main() {
                 console.warn(result);
                 throw new Error('Error in updating sheet');
             }
+             */
             ranked = false;
             office = '';
             rowNumber += spreadsheetData.length + 1;
