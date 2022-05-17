@@ -9,7 +9,7 @@ const util = require('util');
 const csvParse = util.promisify(require('csv-parse'));
 const {google} = require('googleapis');
 const inputFile = process.argv[2] || 'vote_by_vote.csv';
-const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+const spreadsheetId = ''; //process.env.GOOGLE_SPREADSHEET_ID;
 const googleAccountKey = require(findConfig(process.env.GOOGLE_ACCOUNT_KEY_FILE));
 
 if (dotEnvResult.error) {
@@ -25,15 +25,17 @@ main()
 async function main() {
     const chunks = fs.readFileSync(inputFile, 'utf8')
         .replace(/^\uFEFF/, '') // remove BOM
+        .replace(/(\n\d+,[^\n]+\n)(?!\d)/g, '$1\n') // add extra newline before offices
         .trim()
         .split(/\n\n+/);
+    console.warn(chunks.length, 'chunks');
     const auth = new google.auth.JWT(
         googleAccountKey.client_email,
         null,
         googleAccountKey.private_key,
         ['https://www.googleapis.com/auth/spreadsheets']
     );
-    const sheets = google.sheets({version: 'v4', auth});
+    const sheets = null; // google.sheets({version: 'v4', auth});
     let votes = {};
     let ranked = false;
     let office = '';
@@ -41,21 +43,28 @@ async function main() {
     let sheetName = '';
     for (const chunk of chunks) {
         if (!office) {
-            office = chunk.replace(' Fage ', ' Fair ');
+            office = chunk;
             votes = {};
             rowNumber = 1;
+            ranked = false;
             sheetName = office.replace(/^Council | \(.*/, '');
-            /*
-            const result = await sheets.spreadsheets.values.clear({
-                spreadsheetId,
-                range: `'${sheetName}'`,
-                auth,
-            });
-            if (result.statusText !== 'OK') {
-                console.warn(result);
-                throw new Error('Error in clearing sheet');
+            sheetName = {
+                'Attorney General': 'AG',
+                'Delegate to the US House': 'Delegate',
+                'US Representative': 'Shadow Rep',
+            }[sheetName] || sheetName;
+            console.warn(sheetName);
+            if (sheets) {
+                const result = await sheets.spreadsheets.values.clear({
+                    spreadsheetId,
+                    range: `'${sheetName}'`,
+                    auth,
+                });
+                if (result.statusText !== 'OK') {
+                    console.warn(result);
+                    throw new Error('Error in clearing sheet');
+                }
             }
-             */
         }
         else if (/^The highest ranked candidate gets the highest score/.test(chunk)) {
             ranked = true;
@@ -66,6 +75,10 @@ async function main() {
             assert(!votes[office], `Votes already seen for "${office}`);
             const convertedData = [];
             for (const row of csvData) {
+                if (row['']) {
+                    row.Ballot = row[''];
+                    delete row[''];
+                }
                 convertedData.push(transformRow(row, ranked));
             }
             convertedData.sort((a, b) => a.Voter.localeCompare(b.Voter));
@@ -74,8 +87,28 @@ async function main() {
                 if (row.Abstain) {
                     continue;
                 }
-                const first = Object.keys(row).find(n => row[n] === 1) || '';
-                const second = Object.keys(row).find(n => row[n] === 2) || '';
+                let first = '';
+                let second = '';
+                for (const [name, value] of Object.entries(row)) {
+                    if (/Write-in/i.test(name) && value) {
+                        if (!ranked || / \(1\)$/.test(value)) {
+                            first = value.replace(/ \(1\)$/, '');
+                        }
+                        else if (/ \(2\)$/.test(value)) {
+                            second = value.replace(/ \(2\)$/, '');
+                        }
+                    }
+                    if (value === 1) {
+                        first = name;
+                    }
+                    else if (value === 2) {
+                        second = name;
+                    }
+                }
+                if (second && !first) {
+                    first = second;
+                    second = '';
+                }
                 if (!counts[first]) {
                     counts[first] = {TOTAL: 0};
                 }
@@ -89,41 +122,48 @@ async function main() {
             }
             const firstChoices = Object.keys(counts)
                 .sort((a, b) => (counts[b].TOTAL - counts[a].TOTAL) || a.localeCompare(b));
+            console.log(office);
             for (const first of firstChoices) {
-                const secondChoices = Object.keys(counts[first]).filter(n => n !== 'TOTAL')
-                    .sort((a, b) => (counts[first][b] - counts[first][a]) || a.localeCompare(b));
                 let c1 = first;
                 let c2 = counts[first].TOTAL;
+                if (!ranked) {
+                    console.log(`${c1}\t${c2}`);
+                    continue;
+                }
+                const secondChoices = Object.keys(counts[first]).filter(n => n !== 'TOTAL')
+                    .sort((a, b) => (counts[first][b] - counts[first][a]) || a.localeCompare(b));
                 for (const second of secondChoices) {
                     console.log(`${c1}\t${c2}\t${second || 'No endorsement'}\t${counts[first][second]}`);
                     c1 = '';
                     c2 = '';
                 }
             }
+            console.log('');
             votes[office] = convertedData;
             const spreadsheetData = [
                 [office],
                 Object.keys(convertedData[0]),
                 ...convertedData.map(Object.values),
             ];
-            /*
-            const result = await sheets.spreadsheets.values.update({
-                spreadsheetId,
-                range: `'${sheetName}'!A${rowNumber}`,
-                valueInputOption: 'RAW',
-                resource: {
-                    values: spreadsheetData,
-                },
-                auth,
-            });
-            if (result.statusText !== 'OK') {
-                console.warn(result);
-                throw new Error('Error in updating sheet');
+            if (sheets) {
+                const result = await sheets.spreadsheets.values.update({
+                    spreadsheetId,
+                    range: `'${sheetName}'!A${rowNumber}`,
+                    valueInputOption: 'RAW',
+                    resource: {
+                        values: spreadsheetData,
+                    },
+                    auth,
+                });
+                if (result.statusText !== 'OK') {
+                    console.warn(result);
+                    throw new Error('Error in updating sheet');
+                }
             }
-             */
             ranked = false;
             office = '';
             rowNumber += spreadsheetData.length + 1;
+            console.log('');
         }
     }
 }
@@ -137,7 +177,7 @@ function transformRow(row, ranked) {
             if (name !== 'Ballot') {
                 newRow[name] = ranked ? value.replace(/(?<=\()(\d+)(?=\))/, (m, m1) => candidates - m1 + 1) : value;
                 if (/Write-in/i.test(name)) {
-                    if (/\(1\)$/.test(newRow[name])) {
+                    if (!ranked || /\(1\)$/.test(newRow[name])) {
                         usedFirstChoice = true;
                     }
                     else if (/\((?:[2-9]|\d\d+)\)$/.test(newRow[name])) {
