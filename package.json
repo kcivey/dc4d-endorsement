@@ -29,6 +29,6 @@
     "dotenv": "^8.2.0",
     "find-config": "^1.0.0",
     "googleapis": "^48.0.0",
-    "terser": "^4.6.7"
+    "terser": "^4.8.1"
   }
 }
