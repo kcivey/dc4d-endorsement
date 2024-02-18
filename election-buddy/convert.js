@@ -9,7 +9,7 @@ const util = require('util');
 const csvParse = util.promisify(require('csv-parse'));
 const {google} = require('googleapis');
 const inputFile = process.argv[2] || 'vote_by_vote.csv';
-const spreadsheetId = ''; //process.env.GOOGLE_SPREADSHEET_ID;
+const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
 const googleAccountKey = require(findConfig(process.env.GOOGLE_ACCOUNT_KEY_FILE));
 
 if (dotEnvResult.error) {
@@ -35,7 +35,7 @@ async function main() {
         googleAccountKey.private_key,
         ['https://www.googleapis.com/auth/spreadsheets']
     );
-    const sheets = null; // google.sheets({version: 'v4', auth});
+    const sheets = google.sheets({version: 'v4', auth});
     let votes = {};
     let ranked = false;
     let office = '';
@@ -47,7 +47,10 @@ async function main() {
             votes = {};
             rowNumber = 1;
             ranked = false;
-            sheetName = office.replace(/^Council | \(.*/, '');
+            sheetName = office.replace(/^Council | \(.*/, '')
+                .replace(/^"?DC for Democracy's.*\?"?$/, 'Ward')
+                .replace(/\s*\(.*\)\s*$/, '')
+                .replace('Initiative ', 'I-');
             sheetName = {
                 'Attorney General': 'AG',
                 'Delegate to the US House': 'Delegate',
